@@ -335,6 +335,8 @@
               DESTINATION: "DESTINATION",
               TIME: "TIME",
               DISPLAY: "DISPLAY",
+              AUDIO: "AUDIO",
+              SOUND: "Sound",
               FULLSCREEN: "TOGGLE FULLSCREEN",
               FS_NOTE: "Note: iOS users please use 'Add to Home Screen'."
           },
@@ -389,6 +391,8 @@
               DESTINATION: "ZIEL",
               TIME: "ZEIT",
               DISPLAY: "BILDSCHIRM",
+              AUDIO: "TON",
+              SOUND: "Geräusche",
               FULLSCREEN: "VOLLBILD UMSCHALTEN",
               FS_NOTE: "iOS: Bitte 'Zum Home-Bildschirm' nutzen."
           }
@@ -1480,7 +1484,7 @@
         useEffect(() => {
           const handleKeyDown = (e) => { keysRef.current[e.key] = true; if ((gameState === GameState.GAME_OVER || gameState === GameState.START) && e.key === 'Enter') handleStartGame(); if (gameState === GameState.SPLASH && e.key === 'Enter') startIntro(); if (gameState === GameState.NAME_INPUT && e.key === 'Enter') submitName(); };
           const handleKeyUp = (e) => keysRef.current[e.key] = false;
-          window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
+          window.addEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp);
           return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
         }, [gameState, handleStartGame, nameInput]);
 
@@ -1507,8 +1511,9 @@
                   </div>
                  </>
                )}
-              <button onClick={toggleMute} className="bg-white/90 p-1 rounded-md shadow-md hover:bg-gray-200 mt-1">
-                 {isMuted ? '🔇' : '🔊'}
+              {/* CHANGED: Mute button removed from here, replaced with Fullscreen Button */}
+              <button onClick={toggleFullScreen} className="bg-white/90 p-1 rounded-md shadow-md hover:bg-gray-200 mt-1 w-8 h-8 flex items-center justify-center">
+                 ⛶
               </button>
             </div>
             
@@ -1654,6 +1659,16 @@
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1">
                     
+                    {/* NEW: Audio Toggle Card (Moved from main screen) */}
+                     <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                        <div className="flex justify-between items-center mb-2"> 
+                            <span className="font-bold text-sm text-white">{t('AUDIO')}</span> 
+                        </div>
+                        <button onClick={toggleMute} className={`w-full py-2 text-xs font-bold rounded border transition-colors ${!isMuted ? 'bg-white text-black border-white' : 'bg-black text-gray-500 border-gray-700'}`}>
+                            {isMuted ? `🔇 ${t('SOUND')} OFF` : `🔊 ${t('SOUND')} ON`}
+                        </button>
+                    </div>
+
                     {/* Language Card */}
                     <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
                         <div className="flex justify-between items-center mb-2"> 
@@ -1709,17 +1724,6 @@
                                 <span className="text-xs font-mono font-bold">{missionStats.totalGames}</span>
                             </div>
                         </div>
-                    </div>
-
-                    {/* NEW: Fullscreen Card */}
-                    <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                        <div className="flex justify-between items-center mb-2"> 
-                            <span className="font-bold text-sm text-white">{t('DISPLAY')}</span> 
-                        </div>
-                        <button onClick={toggleFullScreen} className="w-full py-2 text-xs font-bold rounded border border-gray-500 bg-black text-white hover:bg-gray-800 transition-colors mb-1">
-                            🖥️ {t('FULLSCREEN')}
-                        </button>
-                        <p className="text-[10px] text-gray-500 text-center italic">{t('FS_NOTE')}</p>
                     </div>
 
                 </div>

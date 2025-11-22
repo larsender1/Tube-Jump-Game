@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
     <title>Tube Jump: Mind the Gap</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=P22+Underground:wght@700&display=swap" rel="stylesheet"> 
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     
-    <!-- React & ReactDOM (UMD for standalone usage) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel to compile JSX in browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -45,6 +45,9 @@
       .font-tube {
         font-family: 'P22 Underground', 'Inter', sans-serif;
       }
+      .font-mono-receipt {
+        font-family: 'Share Tech Mono', monospace;
+      }
       
       @keyframes pop {
         0% { transform: scale(1); }
@@ -71,12 +74,18 @@
         animation: fadeIn 0.5s ease-out forwards;
       }
 
-      @keyframes blinkRed {
-        0%, 100% { background-color: rgba(0,0,0,0.9); color: white; }
-        50% { background-color: #E32017; color: black; }
+      @keyframes pulseRed {
+        0%, 100% { background-color: rgba(20, 0, 0, 0.95); color: #E32017; }
+        50% { background-color: rgba(60, 0, 0, 0.95); color: #ff5555; }
       }
-      .animate-blink-red {
-        animation: blinkRed 0.3s infinite;
+      .animate-pulse-red {
+        animation: pulseRed 2s infinite ease-in-out;
+      }
+      
+      .dot-matrix-text {
+          font-family: 'Share Tech Mono', monospace;
+          color: #FFB81C;
+          text-shadow: 0 0 2px #FF9900;
       }
 
     </style>
@@ -95,6 +104,12 @@
 
     <script type="text/babel">
       const { useState, useRef, useEffect, useCallback } = React;
+
+// --- SUPABASE START ---
+      const SUPABASE_URL = 'https://pyxjaingrqsfyqcidblw.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5eGphaW5ncnFzZnlxY2lkYmx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3Mjk5MjEsImV4cCI6MjA3OTMwNTkyMX0.RIWfK5ngpNSfW67OS7av_L1P6rSAustabdWjj7OQow0';
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      // ----------------------
 
       // --- CONSTANTS ---
       const CANVAS_WIDTH = 400;
@@ -119,8 +134,9 @@
       // Zones
       const ZONE_LIMITS = {
           TUBE: 5000, 
-          STATION: 12500,
-          SPACE: 30000
+          STATION: 10000, // Zone 2 ends/City starts
+          CITY: 25000,    // Zone 3 ends/Space starts
+          SPACE: 25000
       };
 
       // Colors (London Underground Palette)
@@ -131,8 +147,8 @@
         GREY: '#A0A5A9',   // Jubilee / Platform
         DARK: '#111111',   // Tunnel background
         STATION_BG: '#E5E5E5', // Station Tiling
-        SKY_BG: '#0F172A', // Night Sky
-        SPACE_BG: '#000000', // Deep Space
+        CITY_BG: '#87CEEB', // London Day (Sky Blue)
+        SPACE_BG: '#050314', // Deep Space
         WHITE: '#FFFFFF',
         BROWN: '#B06010',  // Bakerloo
         GREEN: '#009900',  // District / Spring
@@ -168,13 +184,15 @@
       const GameState = {
         SPLASH: 'SPLASH',
         INTRO: 'INTRO',
+        NAME_INPUT: 'NAME_INPUT',
         START: 'START',
         PLAYING: 'PLAYING',
         TERMINATED_ANIM: 'TERMINATED_ANIM', 
         GAME_OVER: 'GAME_OVER',
         SHOP: 'SHOP',
         MISSIONS: 'MISSIONS',
-        SETTINGS: 'SETTINGS'
+        SETTINGS: 'SETTINGS',
+        RANKING: 'RANKING'
       };
 
       const SkinType = {
@@ -198,7 +216,8 @@
         COINS: 'COINS',
         JUMPS: 'JUMPS',
         POWERUPS: 'POWERUPS',
-        GAMES: 'GAMES'
+        GAMES: 'GAMES',
+        STOPS: 'STOPS'
       };
 
       const SHOP_SKINS = [
@@ -206,7 +225,7 @@
         { id: SkinType.HARDHAT, name: 'Hard Hat', price: 50, desc: 'Safety first!', color: '#FBBF24' },
         { id: SkinType.TOPHAT, name: 'Top Hat', price: 300, desc: 'Quite fancy.', color: '#000' },
         { id: SkinType.VIKING, name: 'Viking', price: 500, desc: 'To Valhalla!', color: '#A4A4A4' },
-        { id: SkinType.ROYALGUARD, name: 'Royal Guard', price: 500, desc: 'Stand attention!', color: '#000' },
+        { id: SkinType.ROYALGUARD, name: 'Royal Guard', price: 1000, desc: 'Stand attention!', color: '#000' },
         { id: SkinType.CROWN, name: 'Royal Crown', price: 5000, desc: 'King of the Underground.', color: '#FFD700' },
       ];
 
@@ -221,10 +240,10 @@
       const MISSION_DEFINITIONS = {
           [MissionCategory.HEIGHT]: [
               { target: 5000, reward: 50, desc: "Reach Station Zone (5000)" },
-              { target: 12500, reward: 150, desc: "Reach Skyline Zone (12500)" },
-              { target: 25000, reward: 500, desc: "Reach Upper Atmosphere (25000)" },
-              { target: 50000, reward: 2500, desc: "Reach Deep Space (50000)" },
-              { target: 100000, reward: 5000, desc: "Reach Infinity (100000)" }
+              { target: 10000, reward: 100, desc: "Reach City Zone (10000)" },
+              { target: 25000, reward: 250, desc: "Reach Space (25000)" },
+              { target: 50000, reward: 1000, desc: "Deep Space (50000)" },
+              { target: 100000, reward: 2500, desc: "Reach Infinity (100000)" }
           ],
           [MissionCategory.COINS]: [
               { target: 200, reward: 50, desc: "Accumulate 200 Coins" },
@@ -253,6 +272,13 @@
               { target: 200, reward: 1000, desc: "Play 200 Games" },
               { target: 1000, reward: 5000, desc: "Play 1000 Games" },
               { target: 5000, reward: 15000, desc: "Play 5000 Games" }
+          ],
+          [MissionCategory.STOPS]: [
+              { target: 50, reward: 50, desc: "Land on 50 Platforms" },
+              { target: 250, reward: 250, desc: "Land on 250 Platforms" },
+              { target: 1000, reward: 800, desc: "Land on 1000 Platforms" },
+              { target: 5000, reward: 2500, desc: "Land on 5000 Platforms" },
+              { target: 20000, reward: 10000, desc: "Land on 20000 Platforms" }
           ]
       };
 
@@ -283,8 +309,8 @@
               REWARD: "REWARD",
               CLAIM: "CLAIM",
               IN_PROGRESS: "IN PROGRESS",
-              GAME_OVER_TITLE: "GAP INCIDENT",
-              GAME_OVER_DESC: "Please report to ticket hall.",
+              GAME_OVER_TITLE: "SERVICE TERMINATED",
+              GAME_OVER_DESC: "Mind the Gap",
               SERVICE_TERMINATED: "SERVICE\nTERMINATED",
               ENTER_STATION: "Click to Enter Station",
               LANGUAGE: "LANGUAGE",
@@ -293,11 +319,21 @@
               STAT_COINS: "Total Coins",
               STAT_JUMPS: "Total Jumps",
               STAT_GAMES: "Total Games",
-              STAT_POWERUPS: "Total Powerups",
+              STAT_POWERUPS: "Powerups",
               SERVICE_STATUS: "SERVICE STATUS",
               GOOD_SERVICE: "Good Service",
               LINE: "Line",
-              DETAILS: "Details"
+              DETAILS: "Details",
+              IDENTIFICATION: "IDENTIFICATION",
+              ENTER_NAME: "ENTER NAME",
+              CONFIRM: "CONFIRM",
+              RANKING: "RANKING",
+              TOP_PASSENGERS: "PASSENGER RANKING",
+              SYNCING: "Checking manifest...",
+              NO_DATA: "No passenger data found.",
+              PLATFORM: "PLATFORM",
+              DESTINATION: "DESTINATION",
+              TIME: "TIME"
           },
           DE: {
               PLAY: "START",
@@ -324,8 +360,8 @@
               REWARD: "BELOHNUNG",
               CLAIM: "ABHOLEN",
               IN_PROGRESS: "LAUFEND",
-              GAME_OVER_TITLE: "UNFALL",
-              GAME_OVER_DESC: "Bitte zum Ausgang begeben.",
+              GAME_OVER_TITLE: "BETRIEB EINGESTELLT",
+              GAME_OVER_DESC: "Bitte Zurückbleiben",
               SERVICE_TERMINATED: "BETRIEB\nEINGESTELLT",
               ENTER_STATION: "Klicken zum Starten",
               LANGUAGE: "SPRACHE",
@@ -338,7 +374,17 @@
               SERVICE_STATUS: "BETRIEBSSTATUS",
               GOOD_SERVICE: "Guter Service",
               LINE: "Linie",
-              DETAILS: "Details"
+              DETAILS: "Details",
+              IDENTIFICATION: "IDENTIFIKATION",
+              ENTER_NAME: "NAME EINGEBEN",
+              CONFIRM: "BESTÄTIGEN",
+              RANKING: "RANGLISTE",
+              TOP_PASSENGERS: "FAHRGAST RANGLISTE",
+              SYNCING: "Lade Liste...",
+              NO_DATA: "Keine Daten gefunden.",
+              PLATFORM: "GLEIS",
+              DESTINATION: "ZIEL",
+              TIME: "ZEIT"
           }
       };
 
@@ -539,18 +585,7 @@
         },
 
         gameOver: function() {
-          if (this.isMuted || !this.ctx) return;
-          try {
-              const osc = this.ctx.createOscillator();
-              const gain = this.ctx.createGain();
-              osc.type = 'triangle';
-              osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-              osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.8);
-              gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-              gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.8);
-              osc.connect(gain); gain.connect(this.ctx.destination);
-              osc.start(); osc.stop(this.ctx.currentTime + 0.8);
-          } catch(e) {}
+          // No sound for game over
         },
 
         buy: function() {
@@ -572,17 +607,49 @@
         },
 
         doorsClosing: function() {
-            // Sound removed as per user request
+            // Sound removed
         }
       };
 
 
       // --- GAME COMPONENT ---
       const GameCanvas = () => {
+// --- LEADERBOARD STATE ---
+        const [leaderboard, setLeaderboard] = useState([]);
+        const [isUploading, setIsUploading] = useState(false);
+        const [hasEnteredName, setHasEnteredName] = useState(false); 
+
+        const submitScoreAndFetchLeaderboard = async (finalScore) => {
+            setIsUploading(true);
+            const nameToSave = playerName || 'Driver';
+            
+            // 1. Score hochladen (Tabelle heißt 'highscore')
+            await supabase.from('highscore').insert({ player_name: nameToSave, score: finalScore });
+
+            // 2. Bestenliste laden (Top 10)
+            const { data } = await supabase
+                .from('highscore')
+                .select('player_name, score')
+                .order('score', { ascending: false })
+                .limit(10);
+            
+            if (data) setLeaderboard(data);
+            setIsUploading(false);
+        };
+
+        const fetchLeaderboardOnly = async () => {
+            const { data } = await supabase
+                .from('highscore')
+                .select('player_name, score')
+                .order('score', { ascending: false })
+                .limit(10);
+            if (data) setLeaderboard(data);
+        };
+        // -------------------------
         const canvasRef = useRef(null);
         const [gameState, setGameState] = useState(GameState.SPLASH);
         const [score, setScore] = useState(0);
-        const [shopTab, setShopTab] = useState('SKINS'); // SKINS or ITEMS
+        const [shopTab, setShopTab] = useState('SKINS'); 
         
         // Transition State
         const [doorState, setDoorState] = useState('IDLE'); // IDLE, CLOSING, CLOSED, OPENING
@@ -601,6 +668,7 @@
         const [isMuted, setIsMuted] = useState(false);
         const [language, setLanguage] = useState('EN'); // 'EN' or 'DE'
         const [coinAnim, setCoinAnim] = useState(false);
+        const [playerName, setPlayerName] = useState('Driver');
         
         // Session Loadout State (Toggles on Start Screen)
         const [loadout, setLoadout] = useState({
@@ -617,14 +685,17 @@
              totalJumps: 0,
              totalPowerups: 0,
              totalGames: 0,
-             tiers: { // Index of next incomplete tier (0, 1, 2...)
+             tiers: { 
                  [MissionCategory.HEIGHT]: 0,
                  [MissionCategory.COINS]: 0,
                  [MissionCategory.JUMPS]: 0,
                  [MissionCategory.POWERUPS]: 0,
-                 [MissionCategory.GAMES]: 0
+                 [MissionCategory.GAMES]: 0,
+                 [MissionCategory.STOPS]: 0
              }
         });
+        
+        const [nameInput, setNameInput] = useState('');
 
         // Logic Refs
         const playerRef = useRef({
@@ -645,13 +716,15 @@
         const particlesRef = useRef([]); 
         const floatingCoinsRef = useRef([]); 
         const scoreRef = useRef(0);
+        const nextRoundelHeightRef = useRef(3000);
         
         const sessionStatsRef = useRef({
             coins: 0,
             jumps: 0,
             powerups: 0,
             reviveUsed: false,
-            activeEffects: [] 
+            activeEffects: [],
+            stops: 0
         });
         
         const missionStatsRef = useRef({});
@@ -659,12 +732,14 @@
         const animationFrameRef = useRef(0);
         const shakeRef = useRef(0);
         const introTimerRef = useRef(0);
+        const roundelsRef = useRef([]);
         
         const t = (key) => {
             const lang = (TRANSLATIONS[language]) ? language : 'EN';
             return TRANSLATIONS[lang][key] || key;
         };
         
+        // Load Data
         useEffect(() => {
           const savedData = localStorage.getItem('tubeJumpData_v8'); 
           
@@ -674,6 +749,7 @@
           let loadedEquipped = SkinType.NONE;
           let loadedMute = false;
           let loadedLang = 'EN';
+          let loadedName = 'Driver';
           let loadedInventory = { 
               [ConsumableType.ROCKET]: 0, 
               [ConsumableType.REVIVE]: 0,
@@ -691,7 +767,8 @@
                  [MissionCategory.COINS]: 0,
                  [MissionCategory.JUMPS]: 0,
                  [MissionCategory.POWERUPS]: 0,
-                 [MissionCategory.GAMES]: 0
+                 [MissionCategory.GAMES]: 0,
+                 [MissionCategory.STOPS]: 0
              }
           };
 
@@ -704,6 +781,10 @@
                 loadedEquipped = parsed.equippedSkin || SkinType.NONE;
                 if (parsed.isMuted !== undefined) loadedMute = parsed.isMuted;
                 if (parsed.language !== undefined) loadedLang = parsed.language;
+                if (parsed.playerName !== undefined) {
+                    loadedName = parsed.playerName;
+                    setHasEnteredName(true); 
+                }
                 if (parsed.inventory) loadedInventory = { ...loadedInventory, ...parsed.inventory };
                 if (parsed.missionStats) {
                     loadedMissionStats = { ...loadedMissionStats, ...parsed.missionStats };
@@ -725,10 +806,17 @@
           setInventory(loadedInventory);
           setIsMuted(loadedMute);
           setLanguage(loadedLang);
+          setPlayerName(loadedName);
           setMissionStats(loadedMissionStats);
           missionStatsRef.current = JSON.parse(JSON.stringify(loadedMissionStats));
           AudioSys.isMuted = loadedMute;
         }, []);
+
+        useEffect(() => {
+            if (gameState === GameState.START || gameState === GameState.RANKING) {
+                fetchLeaderboardOnly();
+            }
+        }, [gameState]);
 
         useEffect(() => {
             if (isMuted) AudioSys.stopJetpack();
@@ -739,7 +827,7 @@
             setTimeout(() => setCoinAnim(false), 200);
         }, []);
 
-        const saveData = (newCoins, newOwned, newEquipped, newHighScore, newMute, newMissionStats, newInventory, newLang) => {
+        const saveData = (newCoins, newOwned, newEquipped, newHighScore, newMute, newMissionStats, newInventory, newLang, newName) => {
           const data = {
             highScore: newHighScore !== undefined ? newHighScore : highScore,
             coins: newCoins !== undefined ? newCoins : coins,
@@ -747,6 +835,7 @@
             equippedSkin: newEquipped || equippedSkin,
             isMuted: newMute !== undefined ? newMute : isMuted,
             language: newLang !== undefined ? newLang : language,
+            playerName: newName !== undefined ? newName : playerName,
             missionStats: newMissionStats || missionStats,
             inventory: newInventory || inventory
           };
@@ -757,14 +846,23 @@
           const newVal = !isMuted;
           setIsMuted(newVal);
           AudioSys.isMuted = newVal;
-          saveData(undefined, undefined, undefined, undefined, newVal, undefined, undefined, undefined);
+          saveData(undefined, undefined, undefined, undefined, newVal, undefined, undefined, undefined, undefined);
           if (!newVal) AudioSys.init();
         };
         
         const setLanguageAndSave = (lang) => {
             setLanguage(lang);
-            saveData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, lang);
+            saveData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, lang, undefined);
             AudioSys.toggle();
+        };
+        
+        const submitName = () => {
+            const finalName = nameInput.trim() || 'Driver';
+            setPlayerName(finalName);
+            setHasEnteredName(true); 
+            saveData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, finalName);
+            setGameState(GameState.START);
+            AudioSys.playTone(400, 'sine', 0.1);
         };
 
         const toggleLoadoutItem = (type) => {
@@ -787,7 +885,8 @@
             if (category === MissionCategory.JUMPS) currentVal = missionStats.totalJumps;
             if (category === MissionCategory.POWERUPS) currentVal = missionStats.totalPowerups;
             if (category === MissionCategory.GAMES) currentVal = missionStats.totalGames;
-            
+            if (category === MissionCategory.STOPS) currentVal = (missionStats.tiers[MissionCategory.STOPS] * 0) + sessionStatsRef.current.stops; 
+
             if (currentVal >= mission.target) {
                  const newCoins = coins + mission.reward;
                  const newMissionStats = { 
@@ -798,7 +897,7 @@
                  setCoins(newCoins);
                  setMissionStats(newMissionStats);
                  missionStatsRef.current = newMissionStats;
-                 saveData(newCoins, undefined, undefined, undefined, undefined, newMissionStats, undefined, undefined);
+                 saveData(newCoins, undefined, undefined, undefined, undefined, newMissionStats, undefined, undefined, undefined);
                  AudioSys.missionComplete();
             }
         };
@@ -900,14 +999,17 @@
                 if (updated[ConsumableType.REVIVE] > 0) {
                     updated[ConsumableType.REVIVE]--;
                 }
-                saveData(undefined, undefined, undefined, undefined, undefined, undefined, updated, undefined);
+                saveData(undefined, undefined, undefined, undefined, undefined, undefined, updated, undefined, undefined);
                 return updated;
             });
         };
 
         const handleStartGame = () => {
+            // NEU: Audio Context für Mobile aufwecken
+            if (AudioSys.ctx && AudioSys.ctx.state === 'suspended') AudioSys.ctx.resume();
+
             setDoorState('CLOSING');
-            AudioSys.doorsClosing();
+            // AudioSys.doorsClosing(); // Sound removed as requested
             setTimeout(() => {
                 setDoorState('CLOSED');
                 initGame();
@@ -950,13 +1052,14 @@
             [ConsumableType.LUCKY_CHARM]: false
           });
           
-          saveData(undefined, undefined, undefined, undefined, undefined, undefined, newInv, undefined);
+          saveData(undefined, undefined, undefined, undefined, undefined, undefined, newInv, undefined, undefined);
 
           const rocketActive = currentEffects.includes(ConsumableType.ROCKET);
 
+          // SAFE START: Place player lower and ensure center platform
           playerRef.current = {
             x: CANVAS_WIDTH / 2 - PLAYER_WIDTH / 2,
-            y: CANVAS_HEIGHT - 150, // LOWER START POS
+            y: CANVAS_HEIGHT - 200, // Lower position
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
             vx: 0,
@@ -969,28 +1072,31 @@
           };
 
           scoreRef.current = 0;
+          nextRoundelHeightRef.current = 3000;
           sessionStatsRef.current = { 
               coins: 0, 
               jumps: 0, 
               powerups: 0,
               reviveUsed: false,
-              activeEffects: currentEffects 
+              activeEffects: currentEffects,
+              stops: 0
           };
           
           setScore(0);
           particlesRef.current = [];
           floatingCoinsRef.current = [];
+          roundelsRef.current = [];
           shakeRef.current = 0;
           missionStatsRef.current = JSON.parse(JSON.stringify(missionStats));
 
           const initialPlatforms = [];
           let currentY = CANVAS_HEIGHT;
           
-          // SAFE BASE PLATFORM - CENTERED BELOW PLAYER
+          // SAFE START: Center platform directly under player
           initialPlatforms.push({
             id: 0,
             x: CANVAS_WIDTH / 2 - PLATFORM_WIDTH / 2, 
-            y: CANVAS_HEIGHT - 60,
+            y: CANVAS_HEIGHT - 100,
             width: PLATFORM_WIDTH,
             height: PLATFORM_HEIGHT,
             type: PlatformType.STATIC,
@@ -1027,6 +1133,7 @@
         const draw = (ctx, time) => {
           ctx.save();
           
+          // INTRO
           if (gameState === GameState.INTRO) {
               const t = introTimerRef.current;
               const maxT = 400;
@@ -1038,7 +1145,35 @@
               if (t < 180) { const p = t / 180; const ease = 1 - Math.pow(1 - p, 3); trainX = -trainWidth + (targetX + trainWidth) * ease; } else { trainX = targetX; }
               let doorOpenGap = 0;
               if (t > 250) { const dp = Math.min(1, (t - 250) / 60); const easeD = dp < .5 ? 2 * dp * dp : -1 + (4 - 2 * dp) * dp; doorOpenGap = easeD * 80; }
+              
+              // Zoom Effect
               if (t > 320) { const zp = (t - 320) / 80; const scale = Math.pow(20, zp); const centerX = CANVAS_WIDTH / 2; const centerY = CANVAS_HEIGHT - 150 - trainHeight / 2 + 20; ctx.translate(centerX, centerY); ctx.scale(scale, scale); ctx.translate(-centerX, -centerY); }
+              
+              // Draw Station Sign above train (NEW: UNDERGROUND ROUNDEL) - VISIBLE FROM START
+              if (t <= 320) {
+                  const signY = 110; 
+                  const cx = CANVAS_WIDTH / 2;
+                  
+                  // Red Circle
+                  ctx.fillStyle = COLORS.RED;
+                  ctx.beginPath(); ctx.arc(cx, signY, 50, 0, Math.PI * 2); ctx.fill();
+                  
+                  // White Inner
+                  ctx.fillStyle = COLORS.WHITE;
+                  ctx.beginPath(); ctx.arc(cx, signY, 35, 0, Math.PI * 2); ctx.fill();
+                  
+                  // Blue Bar
+                  ctx.fillStyle = COLORS.BLUE;
+                  ctx.fillRect(cx - 60, signY - 10, 120, 20);
+                  
+                  // Text
+                  ctx.font = 'bold 14px "P22 Underground", sans-serif';
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillStyle = '#FFF';
+                  ctx.fillText("UNDERGROUND", cx, signY);
+              }
+
               ctx.fillStyle = COLORS.DTUP_WHITE; ctx.fillRect(trainX, CANVAS_HEIGHT - 150 - trainHeight, trainWidth, trainHeight);
               ctx.fillStyle = COLORS.DTUP_BLUE; ctx.fillRect(trainX, CANVAS_HEIGHT - 150 - 40, trainWidth, 40);
               ctx.fillStyle = '#000'; ctx.beginPath(); ctx.roundRect(trainX + 20, CANVAS_HEIGHT - 150 - 200, trainWidth - 40, 100, 10); ctx.fill();
@@ -1047,7 +1182,7 @@
               const drawDoor = (xOffset) => { ctx.fillStyle = '#F0F0F0'; ctx.fillRect(doorCenterX + xOffset, doorY, doorW, doorH); ctx.fillStyle = '#2d3436'; ctx.fillRect(doorCenterX + xOffset + 10, doorY + 20, doorW - 20, 100); ctx.fillStyle = '#111'; ctx.fillRect(doorCenterX + xOffset - 2, doorY, 4, doorH); ctx.fillStyle = '#E32017'; ctx.beginPath(); ctx.arc(doorCenterX + xOffset + doorW/2, doorY + doorH/2 + 10, 6, 0, Math.PI*2); ctx.fill(); };
               drawDoor(-doorW - doorOpenGap); drawDoor(doorOpenGap);
               introTimerRef.current++;
-              if (introTimerRef.current > maxT) setGameState(GameState.START);
+              if (introTimerRef.current > maxT) setGameState(GameState.NAME_INPUT);
               ctx.restore();
               return;
           }
@@ -1061,7 +1196,7 @@
           }
 
           const s = scoreRef.current; const T_RANGE = 1500; 
-          const parallaxY = s * 0.5; // Slower movement for background
+          const parallaxY = s * 0.5; 
 
           const drawDeepTube = (alpha) => { 
             ctx.save(); ctx.globalAlpha = alpha; 
@@ -1072,7 +1207,6 @@
                 const px = 50 + i*120;
                 const pipeY = (parallaxY % 300) - 300; 
                 ctx.beginPath(); ctx.moveTo(px, -50); ctx.lineTo(px, CANVAS_HEIGHT + 50); ctx.stroke();
-                // Cable ties
                 ctx.lineWidth = 8; ctx.strokeStyle = '#222';
                 for(let j=0; j<CANVAS_HEIGHT+300; j+=100) {
                      const tieY = pipeY + j;
@@ -1089,7 +1223,6 @@
             ctx.strokeStyle = '#d4d4d4'; ctx.lineWidth = 1; ctx.beginPath(); 
             for (let i = 0; i < CANVAS_HEIGHT; i += 40) { const visualY = (i + (s % 40)) % CANVAS_HEIGHT; ctx.moveTo(0, visualY); ctx.lineTo(CANVAS_WIDTH, visualY); } 
             for (let i = 0; i < CANVAS_WIDTH; i += 60) { ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_HEIGHT); } ctx.stroke(); 
-            // Parallax Pillars
             const pillarOffset = (parallaxY % 600) - 600;
             ctx.fillStyle = '#ccc';
             for(let i=0; i<CANVAS_HEIGHT+600; i+=300) {
@@ -1099,27 +1232,38 @@
             ctx.restore(); 
           };
 
-          const drawSkyline = (alpha) => { 
+          const drawCity = (alpha) => { 
             ctx.save(); ctx.globalAlpha = alpha; 
-            const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT); grad.addColorStop(0, '#020617'); grad.addColorStop(1, '#1e1b4b'); ctx.fillStyle = grad; ctx.fillRect(-20, -20, CANVAS_WIDTH + 40, CANVAS_HEIGHT + 40); 
-            // Parallax Clouds
-            ctx.fillStyle = 'rgba(255,255,255,0.05)';
-            const cloudY = (parallaxY * 0.2) % CANVAS_HEIGHT;
-            for(let i=0; i<5; i++) {
-                const cx = (i * 150) % CANVAS_WIDTH;
-                const cy = (cloudY + i*120) % CANVAS_HEIGHT;
-                ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI*2); ctx.fill();
+            // Day Sky Gradient
+            const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+            grad.addColorStop(0, '#60A5FA'); // Light Blue 400
+            grad.addColorStop(1, '#DBEAFE'); // Light Blue 100
+            ctx.fillStyle = grad;
+            ctx.fillRect(-20, -20, CANVAS_WIDTH + 40, CANVAS_HEIGHT + 40);
+
+            // Sun
+            ctx.fillStyle = '#FCD34D'; // Yellow 300
+            ctx.beginPath(); ctx.arc(320, 80, 40, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath(); ctx.arc(320, 80, 50, 0, Math.PI*2); ctx.fill();
+
+            // REMOVED: Big Ben / Skyline Parallax Loops to reduce visual bugginess/clutter
+            
+            // Clouds (Keep these)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            const cloudOff = (s * 0.05) % CANVAS_HEIGHT;
+            for(let c=0; c<5; c++) {
+                const cy = (cloudOff + c*200) % CANVAS_HEIGHT;
+                const cx = (c * 100) % CANVAS_WIDTH;
+                ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI*2); ctx.arc(cx+20, cy-10, 40, 0, Math.PI*2); ctx.arc(cx+50, cy, 30, 0, Math.PI*2); ctx.fill();
             }
-            ctx.fillStyle = '#FFF'; const starOffset = s * 0.1; 
-            for(let i=0; i<30; i++) { const sx = (i * 93) % CANVAS_WIDTH; const sy = ((i * 57) + starOffset) % CANVAS_HEIGHT; ctx.save(); ctx.globalAlpha = alpha * (Math.sin(i + time/500) * 0.5 + 0.5); ctx.fillRect(sx, sy, 2, 2); ctx.restore(); } 
-            ctx.fillStyle = '#000'; const buildingOffset = (s * 0.5) % 400; const buildings = [50, 80, 40, 120, 60, 90, 140, 70]; let bx = -buildingOffset; for(let r=0; r<3; r++) { buildings.forEach(h => { ctx.fillRect(bx, CANVAS_HEIGHT - h + 100, 40, h); bx += 40; }); } 
+
             ctx.restore(); 
           };
 
           const drawSpace = (alpha) => {
              ctx.save(); ctx.globalAlpha = alpha;
              ctx.fillStyle = COLORS.SPACE_BG; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-             // Stars
              ctx.fillStyle = '#FFF';
              const starOff = s * 0.05;
              for(let i=0; i<80; i++) {
@@ -1129,17 +1273,14 @@
                  ctx.globalAlpha = alpha * (Math.sin(i + time/300) * 0.4 + 0.6);
                  ctx.fillRect(sx, sy, size/2, size/2);
              }
-             // Parallax Planets
              const planetY = (parallaxY * 0.1);
              ctx.globalAlpha = alpha * 0.8;
              
-             // Planet 1 (Ringed)
              const p1y = (planetY + 100) % (CANVAS_HEIGHT + 400) - 200;
              ctx.fillStyle = '#4a1e75';
              ctx.beginPath(); ctx.arc(80, p1y, 60, 0, Math.PI*2); ctx.fill();
              ctx.strokeStyle = '#7a3e95'; ctx.lineWidth = 8; ctx.beginPath(); ctx.ellipse(80, p1y, 90, 20, -0.2, 0, Math.PI*2); ctx.stroke();
 
-             // Planet 2 (Cratered)
              const p2y = (planetY + 400) % (CANVAS_HEIGHT + 400) - 200;
              ctx.fillStyle = '#882222';
              ctx.beginPath(); ctx.arc(300, p2y, 40, 0, Math.PI*2); ctx.fill();
@@ -1152,10 +1293,32 @@
           if (s < ZONE_LIMITS.TUBE - T_RANGE) drawDeepTube(1); 
           else if (s < ZONE_LIMITS.TUBE) { drawDeepTube(1); drawStation((s - (ZONE_LIMITS.TUBE - T_RANGE)) / T_RANGE); } 
           else if (s < ZONE_LIMITS.STATION - T_RANGE) drawStation(1); 
-          else if (s < ZONE_LIMITS.STATION) { drawStation(1); drawSkyline((s - (ZONE_LIMITS.STATION - T_RANGE)) / T_RANGE); } 
-          else if (s < ZONE_LIMITS.SPACE - T_RANGE) drawSkyline(1);
-          else if (s < ZONE_LIMITS.SPACE) { drawSkyline(1); drawSpace((s - (ZONE_LIMITS.SPACE - T_RANGE)) / T_RANGE); }
+          else if (s < ZONE_LIMITS.STATION) { drawStation(1); drawCity((s - (ZONE_LIMITS.STATION - T_RANGE)) / T_RANGE); } 
+          else if (s < ZONE_LIMITS.CITY - T_RANGE) drawCity(1);
+          else if (s < ZONE_LIMITS.CITY) { drawCity(1); drawSpace((s - (ZONE_LIMITS.CITY - T_RANGE)) / T_RANGE); }
           else drawSpace(1);
+
+          // Background Roundels (Fixed to background layer)
+          roundelsRef.current.forEach((r, i) => {
+              if (!r.active) return;
+              
+              ctx.save();
+              ctx.translate(CANVAS_WIDTH/2, r.y);
+              ctx.scale(0.5, 0.5); // Smaller scale
+              
+              // Draw Roundel
+              ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI*2); ctx.fillStyle = '#E32017'; ctx.fill();
+              ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI*2); ctx.fillStyle = '#F0F0F0'; ctx.fill();
+              ctx.fillStyle = '#003688'; ctx.fillRect(-80, -12, 160, 24);
+              ctx.fillStyle = 'white'; ctx.font = 'bold 16px "P22 Underground", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.fillText(r.name.toUpperCase(), 0, 0);
+              ctx.restore();
+
+              if (r.y > CANVAS_HEIGHT + 100) {
+                  roundelsRef.current.splice(i, 1);
+              }
+          });
+
 
           platformsRef.current.forEach(p => {
             if (p.isBroken) return; 
@@ -1226,7 +1389,7 @@
               if (p.type === PlatformType.GHOST && !p.ghostVisible) return;
               if (!p.isBroken && player.x + player.width * 0.8 > p.x && player.x + player.width * 0.2 < p.x + p.width && player.y + player.height > p.y && player.y + player.height < p.y + p.height + player.vy) {
                 if (p.type === PlatformType.CONVEYOR) player.x += p.conveyorSpeed;
-                if (p.type === PlatformType.BREAKABLE) { p.isBroken = true; player.vy = JUMP_FORCE * 0.3; shakeRef.current = 5; createParticles(p.x + p.width/2, p.y, COLORS.BROWN, 12, 3); AudioSys.crash(); } else { sessionStatsRef.current.jumps += 1; if (p.powerup === PowerupType.SPRING) { player.vy = SPRING_FORCE; shakeRef.current = 3; createParticles(player.x + player.width/2, p.y, COLORS.GREEN, 8, 4); AudioSys.spring(); sessionStatsRef.current.powerups++; } else { player.vy = JUMP_FORCE; createParticles(player.x + player.width/2, player.y + player.height, '#DDD', 4, 1, 0.5); AudioSys.jump(); } }
+                if (p.type === PlatformType.BREAKABLE) { p.isBroken = true; player.vy = JUMP_FORCE * 0.3; shakeRef.current = 5; createParticles(p.x + p.width/2, p.y, COLORS.BROWN, 12, 3); AudioSys.crash(); } else { sessionStatsRef.current.jumps += 1; sessionStatsRef.current.stops += 1; if (p.powerup === PowerupType.SPRING) { player.vy = SPRING_FORCE; shakeRef.current = 3; createParticles(player.x + player.width/2, p.y, COLORS.GREEN, 8, 4); AudioSys.spring(); sessionStatsRef.current.powerups++; } else { player.vy = JUMP_FORCE; createParticles(player.x + player.width/2, player.y + player.height, '#DDD', 4, 1, 0.5); AudioSys.jump(); } }
               }
             });
           }
@@ -1236,6 +1399,19 @@
 
           if (player.y < CANVAS_HEIGHT / 2) {
             const diff = (CANVAS_HEIGHT / 2) - player.y; player.y = CANVAS_HEIGHT / 2; platformsRef.current.forEach(p => p.y += diff); floatingCoinsRef.current.forEach(c => c.y += diff); particlesRef.current.forEach(p => p.y += diff); scoreRef.current += Math.floor(diff); setScore(scoreRef.current);
+            
+            // Scroll Roundels (Station Signs)
+            roundelsRef.current.forEach(r => r.y += diff);
+            
+            // Spawn Roundels logic
+            const ROUNDEL_SPACING = 3000;
+            if (scoreRef.current >= nextRoundelHeightRef.current) {
+                 const stations = ["Piccadilly Circus", "Green Park", "Covent Garden", "Leicester Square", "Holborn", "Russell Square", "King's Cross", "Caledonian Road", "Holloway Road", "Arsenal", "Finsbury Park"];
+                 const idx = Math.floor(nextRoundelHeightRef.current / ROUNDEL_SPACING) % stations.length;
+                 roundelsRef.current.push({ y: -50, name: stations[idx], active: true }); // Spawn slightly above screen
+                 nextRoundelHeightRef.current += ROUNDEL_SPACING;
+            }
+
             platformsRef.current = platformsRef.current.filter(p => p.y < CANVAS_HEIGHT);
             const highestPlatform = platformsRef.current.reduce((prev, curr) => prev.y < curr.y ? prev : curr, {y: 9999, type: PlatformType.STATIC});
             if (highestPlatform.y > PLATFORM_GAP_MIN) { platformsRef.current.push(generatePlatform(highestPlatform.y - (Math.random() * (PLATFORM_GAP_MAX - 40) + 40), highestPlatform.type)); }
@@ -1260,8 +1436,12 @@
             newMissionStats.totalGames += 1;
             
             setMissionStats(newMissionStats);
-            saveData(coins, null, null, isNewHigh ? scoreRef.current : highScore, undefined, newMissionStats, inventory, undefined);
-            
+            saveData(coins, null, null, isNewHigh ? scoreRef.current : highScore, undefined, newMissionStats, inventory, undefined, undefined);
+           
+            submitScoreAndFetchLeaderboard(scoreRef.current); 
+            // -------------------------------------
+
+            setGameState(GameState.TERMINATED_ANIM);
             setGameState(GameState.TERMINATED_ANIM);
             AudioSys.gameOver();
             setTimeout(() => {
@@ -1275,27 +1455,27 @@
           if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
           update(); draw(ctx, time);
           if (gameState === GameState.PLAYING || gameState === GameState.INTRO || gameState === GameState.TERMINATED_ANIM) { animationFrameRef.current = requestAnimationFrame(loop); } 
-          else if ([GameState.SPLASH, GameState.START, GameState.GAME_OVER, GameState.SHOP, GameState.MISSIONS, GameState.SETTINGS].includes(gameState)) { draw(ctx, time); if (gameState === GameState.SHOP || gameState === GameState.SPLASH || gameState === GameState.START || gameState === GameState.MISSIONS || gameState === GameState.SETTINGS) { animationFrameRef.current = requestAnimationFrame(loop); } }
+          else if ([GameState.SPLASH, GameState.START, GameState.GAME_OVER, GameState.SHOP, GameState.MISSIONS, GameState.SETTINGS, GameState.NAME_INPUT, GameState.RANKING].includes(gameState)) { draw(ctx, time); if (gameState === GameState.SHOP || gameState === GameState.SPLASH || gameState === GameState.START || gameState === GameState.MISSIONS || gameState === GameState.SETTINGS || gameState === GameState.NAME_INPUT || gameState === GameState.RANKING) { animationFrameRef.current = requestAnimationFrame(loop); } }
         };
 
         useEffect(() => {
-          const handleKeyDown = (e) => { keysRef.current[e.key] = true; if ((gameState === GameState.GAME_OVER || gameState === GameState.START) && e.key === 'Enter') handleStartGame(); if (gameState === GameState.SPLASH && e.key === 'Enter') startIntro(); };
+          const handleKeyDown = (e) => { keysRef.current[e.key] = true; if ((gameState === GameState.GAME_OVER || gameState === GameState.START) && e.key === 'Enter') handleStartGame(); if (gameState === GameState.SPLASH && e.key === 'Enter') startIntro(); if (gameState === GameState.NAME_INPUT && e.key === 'Enter') submitName(); };
           const handleKeyUp = (e) => keysRef.current[e.key] = false;
           window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
           return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-        }, [gameState, handleStartGame]);
+        }, [gameState, handleStartGame, nameInput]);
 
         useEffect(() => { animationFrameRef.current = requestAnimationFrame(loop); return () => cancelAnimationFrame(animationFrameRef.current); }, [gameState]);
         const handleTouchStart = (direction) => { if (direction === 'left') keysRef.current['ArrowLeft'] = true; else keysRef.current['ArrowRight'] = true; }; const handleTouchEnd = () => { keysRef.current['ArrowLeft'] = false; keysRef.current['ArrowRight'] = false; };
 
-        const buySkin = (item) => { if (coins >= item.price && !ownedSkins.includes(item.id)) { const newCoins = coins - item.price; const newOwned = [...ownedSkins, item.id]; setCoins(newCoins); setOwnedSkins(newOwned); setEquippedSkin(item.id); saveData(newCoins, newOwned, item.id, undefined, undefined, undefined, undefined, undefined); AudioSys.buy(); } };
-        const buyConsumable = (item) => { if (coins >= item.price) { const newCoins = coins - item.price; const newInv = { ...inventory }; newInv[item.id] = (newInv[item.id] || 0) + 1; setCoins(newCoins); setInventory(newInv); saveData(newCoins, undefined, undefined, undefined, undefined, undefined, newInv, undefined); AudioSys.buy(); } };
-        const equipSkin = (skinId) => { if (ownedSkins.includes(skinId)) { setEquippedSkin(skinId); saveData(undefined, undefined, skinId, undefined, undefined, undefined, undefined, undefined); AudioSys.playTone(400, 'sine', 0.1); } };
-        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER || gameState === GameState.SHOP || gameState === GameState.MISSIONS;
+        const buySkin = (item) => { if (coins >= item.price && !ownedSkins.includes(item.id)) { const newCoins = coins - item.price; const newOwned = [...ownedSkins, item.id]; setCoins(newCoins); setOwnedSkins(newOwned); setEquippedSkin(item.id); saveData(newCoins, newOwned, item.id, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.buy(); } };
+        const buyConsumable = (item) => { if (coins >= item.price) { const newCoins = coins - item.price; const newInv = { ...inventory }; newInv[item.id] = (newInv[item.id] || 0) + 1; setCoins(newCoins); setInventory(newInv); saveData(newCoins, undefined, undefined, undefined, undefined, undefined, newInv, undefined, undefined); AudioSys.buy(); } };
+        const equipSkin = (skinId) => { if (ownedSkins.includes(skinId)) { setEquippedSkin(skinId); saveData(undefined, undefined, skinId, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.playTone(400, 'sine', 0.1); } };
+        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER || gameState === GameState.SHOP || gameState === GameState.MISSIONS || gameState === GameState.RANKING;
 
         return (
           <div className="relative w-full max-w-md mx-auto bg-neutral-900 shadow-2xl rounded-xl overflow-hidden border-4 border-gray-800 select-none">
-            <div className="absolute top-4 left-4 z-10 space-y-1">
+            <div className="absolute top-4 left-4 z-50 space-y-1">
                {showHud && (
                  <>
                    <div className="bg-white/90 px-3 py-1 rounded-md shadow-md border-l-4 border-[#E32017]">
@@ -1313,8 +1493,15 @@
               </button>
             </div>
             
-            <div className="absolute top-4 right-4 z-10 bg-white/90 px-2 py-1 rounded-md shadow-md pointer-events-none select-none">
-              <span className="font-sans font-black text-[#009999] text-lg leading-none tracking-tight">SIEMENS</span>
+            <div className="absolute top-4 right-4 z-10 flex flex-col items-end pointer-events-none select-none">
+              <div className="bg-white/90 px-2 py-1 rounded-md shadow-md mb-1">
+                  <span className="font-sans font-black text-[#009999] text-lg leading-none tracking-tight">SIEMENS</span>
+              </div>
+              {hasEnteredName && (
+                  <div className="bg-black text-white font-mono text-xs px-1 py-0.5 border border-gray-500 shadow-sm uppercase tracking-wider animate-fade-in">
+                      {playerName}
+                  </div>
+              )}
             </div>
 
             <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="block w-full h-auto bg-[#111]" style={{ imageRendering: 'pixelated' }}/>
@@ -1334,11 +1521,40 @@
                     <div className="w-16 h-32 border-4 border-[#111] bg-[#444] ml-4 rounded"></div>
                 </div>
             </div>
+            
+            {/* Name Input Screen - REDESIGNED */}
+            {gameState === GameState.NAME_INPUT && (
+              <div className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center text-white p-6 z-40 animate-fade-in">
+                 {/* Service Update Style Container */}
+                 <div className="w-full max-w-xs border-t-8 border-[#E32017] bg-[#111] p-6 shadow-2xl relative">
+                    <h2 className="text-2xl font-bold text-white mb-1 tracking-wide uppercase font-tube">{t('IDENTIFICATION')}</h2>
+                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-800 pb-4">{t('ENTER_NAME')}</p>
+                    
+                    <div className="mb-6">
+                        <input 
+                           type="text" 
+                           value={nameInput}
+                           onChange={(e) => setNameInput(e.target.value.toUpperCase().slice(0, 12))}
+                           className="w-full bg-black text-white font-tube font-bold text-xl p-3 text-center border border-gray-700 focus:border-white outline-none tracking-wider uppercase rounded"
+                           placeholder="DRIVER"
+                           autoFocus
+                        />
+                    </div>
+                    
+                    <button 
+                        onClick={submitName}
+                        className="w-full py-3 bg-[#003688] hover:bg-[#002d72] text-white font-bold rounded-full transition transform hover:scale-105 active:scale-95 border-2 border-white/20"
+                    >
+                        {t('CONFIRM')}
+                    </button>
+                 </div>
+              </div>
+            )}
 
             {gameState === GameState.SPLASH && (
               <div onClick={startIntro} className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-white p-6 text-center z-30 cursor-pointer">
                  <div className="mb-8 animate-pulse text-[#003688]"> <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor"> <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/> </svg> </div>
-                 <h1 className="text-2xl font-bold tracking-widest mb-2">LONDON UNDERGROUND</h1>
+                 <h1 className="text-2xl font-bold tracking-widest mb-2 font-tube">LONDON UNDERGROUND</h1>
                  <p className="text-sm text-gray-400 uppercase tracking-[0.2em]">{t('ENTER_STATION')}</p>
               </div>
             )}
@@ -1352,14 +1568,14 @@
                     ⚙️
                  </button>
               
-                <div className="mb-6 animate-bounce relative">
+                <div className="mb-4 animate-bounce relative">
                    <div className="w-32 h-32 rounded-full bg-[#E32017] flex items-center justify-center shadow-xl"> <div className="w-20 h-20 rounded-full bg-white"></div> </div>
                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-36 h-8 bg-[#003688] flex items-center justify-center shadow-sm z-10"> <span className="text-white font-bold text-sm tracking-widest font-tube">UNDERGROUND</span> </div>
                 </div>
-                <h1 className="text-3xl font-bold mb-4 font-['Inter'] tracking-tight">TUBE JUMP</h1>
+                <h1 className="text-3xl font-bold mb-2 font-['Inter'] tracking-tight">TUBE JUMP</h1>
                 
                 {/* Loadout Toggles */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-6 h-10">
                     {[ConsumableType.ROCKET, ConsumableType.REVIVE, ConsumableType.DOUBLE_COINS, ConsumableType.LUCKY_CHARM].map(type => {
                         const count = inventory[type] || 0;
                         const active = loadout[type];
@@ -1379,48 +1595,111 @@
                     })}
                 </div>
 
-                <div className="flex flex-row gap-4 justify-center items-center">
-                  <button onClick={() => { setGameState(GameState.SHOP); AudioSys.init(); }} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-2xl shadow-lg border-b-4 border-gray-900 active:border-b-0 active:translate-y-1"> <span className="text-2xl mb-1">🛒</span> <span className="text-xs">{t('SHOP')}</span> </button>
-                  <button onClick={() => handleStartGame()} className="w-24 h-24 flex flex-col items-center justify-center bg-[#003688] hover:bg-[#002d72] text-white font-bold rounded-full shadow-lg shadow-blue-900/50 border-4 border-white scale-110 z-10"> <span className="text-xl">{t('PLAY')}</span> </button>
-                  <button onClick={() => { setGameState(GameState.MISSIONS); AudioSys.init(); }} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-2xl shadow-lg border-b-4 border-gray-900 active:border-b-0 active:translate-y-1"> <span className="text-2xl mb-1">📋</span> <span className="text-xs">{t('TASKS')}</span> </button>
+                <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+                   {/* MAIN ROW: SHOP - PLAY - TASKS */}
+                  <div className="flex items-center justify-center gap-4 w-full">
+                       {/* SHOP */}
+                       <button onClick={() => { setGameState(GameState.SHOP); AudioSys.init(); }} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl shadow-lg border-b-4 border-gray-900 active:border-b-0 active:translate-y-1"> 
+                        <span className="text-2xl mb-1">🛒</span> 
+                        <span className="text-[10px]">{t('SHOP')}</span> 
+                      </button>
+                      
+                      {/* PLAY */}
+                      <button onClick={() => handleStartGame()} className="w-28 h-28 flex flex-col items-center justify-center bg-[#003688] hover:bg-[#002d72] text-white font-bold rounded-full shadow-lg shadow-blue-900/50 border-4 border-white scale-110 z-10 font-tube"> 
+                        <span className="text-2xl">{t('PLAY')}</span> 
+                      </button>
+
+                       {/* TASKS */}
+                      <button onClick={() => { setGameState(GameState.MISSIONS); AudioSys.init(); }} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl shadow-lg border-b-4 border-gray-900 active:border-b-0 active:translate-y-1"> 
+                        <span className="text-2xl mb-1">📋</span> 
+                        <span className="text-[10px]">{t('TASKS')}</span> 
+                      </button>
+                  </div>
+                  
+                  {/* BOTTOM ROW: RANKING (CENTERED SQUARE) */}
+                   <div className="flex justify-center w-full">
+                       <button onClick={() => { setGameState(GameState.RANKING); AudioSys.init(); }} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl shadow-lg border-b-4 border-gray-900 active:border-b-0 active:translate-y-1"> 
+                             <span className="text-2xl mb-1">🏆</span> 
+                             <span className="text-[10px]">{t('RANKING')}</span> 
+                      </button>
+                  </div>
                 </div>
               </div>
             )}
             
+            {/* NEW: SETTINGS MENU (Task Style) */}
             {gameState === GameState.SETTINGS && (
               <div className="absolute inset-0 bg-black/95 flex flex-col text-white p-4 z-30 animate-fade-in">
                 <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                    <h2 className="text-2xl font-bold text-yellow-400">{t('SETTINGS')}</h2>
+                    <h2 className="text-2xl font-bold text-yellow-400 font-tube">{t('SERVICE_STATUS')}</h2>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-3">
+                <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1">
+                    
                     {/* Language Card */}
                     <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                        <div className="font-bold text-sm text-yellow-400 mb-2">{t('LANGUAGE')}</div>
+                        <div className="flex justify-between items-center mb-2"> 
+                            <span className="font-bold text-sm text-white">{t('LANGUAGE')}</span> 
+                        </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setLanguageAndSave('EN')} className={`flex-1 py-2 text-xs font-bold rounded border-2 ${language === 'EN' ? 'bg-yellow-500 border-yellow-500 text-black' : 'bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600'}`}>ENGLISH</button>
-                            <button onClick={() => setLanguageAndSave('DE')} className={`flex-1 py-2 text-xs font-bold rounded border-2 ${language === 'DE' ? 'bg-yellow-500 border-yellow-500 text-black' : 'bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600'}`}>DEUTSCH</button>
+                            <button onClick={() => setLanguageAndSave('EN')} className={`flex-1 py-2 text-xs font-bold rounded border transition-colors ${language === 'EN' ? 'bg-white text-black border-white' : 'bg-black text-gray-500 border-gray-700 hover:border-gray-500'}`}>ENGLISH</button>
+                            <button onClick={() => setLanguageAndSave('DE')} className={`flex-1 py-2 text-xs font-bold rounded border transition-colors ${language === 'DE' ? 'bg-white text-black border-white' : 'bg-black text-gray-500 border-gray-700 hover:border-gray-500'}`}>DEUTSCH</button>
                         </div>
                     </div>
 
-                    {/* Stats Card */}
+                    {/* Statistics Card */}
                     <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                        <div className="font-bold text-sm text-yellow-400 mb-2">{t('STATS')}</div>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between border-b border-gray-700 pb-1"><span>{t('STAT_HEIGHT')}</span><span className="font-mono text-gray-300">{missionStats.totalScore}m</span></div>
-                            <div className="flex justify-between border-b border-gray-700 pb-1"><span>{t('STAT_COINS')}</span><span className="font-mono text-gray-300">{missionStats.totalCoins}</span></div>
-                            <div className="flex justify-between border-b border-gray-700 pb-1"><span>{t('STAT_JUMPS')}</span><span className="font-mono text-gray-300">{missionStats.totalJumps}</span></div>
-                            <div className="flex justify-between border-b border-gray-700 pb-1"><span>{t('STAT_GAMES')}</span><span className="font-mono text-gray-300">{missionStats.totalGames}</span></div>
-                            <div className="flex justify-between"><span>{t('STAT_POWERUPS')}</span><span className="font-mono text-gray-300">{missionStats.totalPowerups}</span></div>
+                        <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-1"> 
+                            <span className="font-bold text-sm text-white">{t('STATS')}</span> 
+                            <span className="text-[10px] text-green-500 bg-green-900/30 px-2 py-0.5 rounded font-tube">OPERATIONAL</span>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                                    <span className="text-xs text-gray-400">{t('STAT_HEIGHT')}</span>
+                                </div>
+                                <span className="text-xs font-mono font-bold">{missionStats.totalScore}m</span>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-[#FFD700]"></div>
+                                    <span className="text-xs text-gray-400">{t('STAT_COINS')}</span>
+                                </div>
+                                <span className="text-xs font-mono font-bold">{missionStats.totalCoins}</span>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-[#003688]"></div>
+                                    <span className="text-xs text-gray-400">{t('STAT_JUMPS')}</span>
+                                </div>
+                                <span className="text-xs font-mono font-bold">{missionStats.totalJumps}</span>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-[#E32017]"></div>
+                                    <span className="text-xs text-gray-400">{t('STAT_POWERUPS')}</span>
+                                </div>
+                                <span className="text-xs font-mono font-bold">{missionStats.totalPowerups}</span>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                                    <span className="text-xs text-gray-400">{t('STAT_GAMES')}</span>
+                                </div>
+                                <span className="text-xs font-mono font-bold">{missionStats.totalGames}</span>
+                            </div>
                         </div>
                     </div>
+
                 </div>
-                <button onClick={() => { setGameState(GameState.START); AudioSys.playTone(300, 'sine', 0.1); }} className="w-full py-3 bg-[#E32017] font-bold rounded-lg mt-2">{t('BACK')}</button>
+                <button onClick={() => { setGameState(GameState.START); AudioSys.playTone(300, 'sine', 0.1); }} className="w-full py-3 bg-[#E32017] font-bold rounded-lg mt-2 border-b-4 border-red-900 active:border-b-0 active:translate-y-1">{t('BACK')}</button>
               </div>
             )}
             
             {gameState === GameState.MISSIONS && (
               <div className="absolute inset-0 bg-black/95 flex flex-col text-white p-4 z-30 animate-fade-in">
-                <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2"> <h2 className="text-2xl font-bold text-yellow-400">{t('SERVICE_TASKS')}</h2> <div className="bg-gray-800 px-3 py-1 rounded-full flex items-center gap-2"> <div className="w-3 h-3 rounded-full bg-[#FFD700]"></div> <span className="font-bold">{coins}</span> </div> </div>
+                <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2"> <h2 className="text-2xl font-bold text-yellow-400 font-tube">{t('SERVICE_TASKS')}</h2> <div className="bg-gray-800 px-3 py-1 rounded-full flex items-center gap-2"> <div className="w-3 h-3 rounded-full bg-[#FFD700]"></div> <span className="font-bold">{coins}</span> </div> </div>
                 <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1">
                   {Object.keys(MISSION_DEFINITIONS).map(cat => {
                       const tierIdx = missionStats.tiers[cat];
@@ -1442,6 +1721,7 @@
                       if (cat === MissionCategory.JUMPS) currentVal = missionStats.totalJumps;
                       if (cat === MissionCategory.POWERUPS) currentVal = missionStats.totalPowerups;
                       if (cat === MissionCategory.GAMES) currentVal = missionStats.totalGames;
+                      if (cat === MissionCategory.STOPS) currentVal = (missionStats.tiers[MissionCategory.STOPS] * 0) + sessionStatsRef.current.stops; 
 
                       const pct = Math.min(100, (currentVal / mission.target) * 100);
                       const isComplete = currentVal >= mission.target;
@@ -1464,12 +1744,38 @@
                       );
                   })}
                 </div>
-                <button onClick={() => { setGameState(GameState.START); AudioSys.playTone(300, 'sine', 0.1); }} className="w-full py-3 bg-[#E32017] font-bold rounded-lg mt-2">{t('BACK')}</button>
+                <button onClick={() => { setGameState(GameState.START); AudioSys.playTone(300, 'sine', 0.1); }} className="w-full py-3 bg-[#E32017] font-bold rounded-lg mt-2 border-b-4 border-red-900 active:border-b-0 active:translate-y-1">{t('BACK')}</button>
+              </div>
+            )}
+
+            {gameState === GameState.RANKING && (
+              <div className="absolute inset-0 bg-black/95 flex flex-col text-white p-4 z-30 animate-fade-in">
+                 <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                    <h2 className="text-2xl font-bold text-yellow-400 font-tube">{t('TOP_PASSENGERS')}</h2>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-2 pb-4 pr-1">
+                    {leaderboard.length === 0 ? <div className="text-yellow-600 text-xs font-mono text-center italic mt-10">{t('SYNCING')}</div> : null}
+                    {leaderboard.map((entry, i) => (
+                        <div key={i} className={`p-3 rounded-lg border flex items-center justify-between ${entry.player_name === playerName ? 'bg-blue-900/30 border-blue-500' : 'bg-gray-800 border-gray-700'}`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${i===0 ? 'bg-yellow-500 text-black ring-2 ring-yellow-300' : i===1 ? 'bg-gray-400 text-black ring-2 ring-gray-300' : i===2 ? 'bg-orange-700 text-white ring-2 ring-orange-500' : 'bg-gray-700 text-gray-400'}`}>
+                                    {i+1}
+                                </div>
+                                <span className={`font-bold truncate max-w-[150px] ${entry.player_name === playerName ? 'text-white' : 'text-gray-300'}`}>{entry.player_name}</span>
+                            </div>
+                            {/* CHANGED FONT TO TUBE FONT FOR CLEANER LOOK */}
+                            <span className="font-bold text-yellow-400 text-lg font-tube">{entry.score}m</span>
+                        </div>
+                    ))}
+                </div>
+
+                <button onClick={() => { setGameState(GameState.START); AudioSys.playTone(300, 'sine', 0.1); }} className="w-full py-3 bg-[#E32017] font-bold rounded-lg mt-2 border-b-4 border-red-900 active:border-b-0 active:translate-y-1">{t('BACK')}</button>
               </div>
             )}
 
             {gameState === GameState.TERMINATED_ANIM && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black z-40 animate-blink-red">
+                <div className="absolute inset-0 flex items-center justify-center bg-black z-40 animate-pulse-red">
                     <div className="text-center">
                         <h1 className="text-5xl font-black tracking-widest border-4 border-current p-4 whitespace-pre-line">{t('SERVICE_TERMINATED')}</h1>
                     </div>
@@ -1477,26 +1783,54 @@
             )}
 
             {gameState === GameState.GAME_OVER && (
-              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-white p-6 text-center z-20 animate-fade-in">
-                <h2 className="text-4xl font-bold text-[#E32017] mb-2">{t('GAME_OVER_TITLE')}</h2>
-                <p className="text-gray-400 mb-6">{t('GAME_OVER_DESC')}</p>
-                <div className="bg-gray-800 p-4 rounded-lg mb-6 w-full max-w-xs border border-gray-700">
-                  <div className="flex justify-between mb-2"><span>{t('SCORE')}</span><span className="font-bold text-white">{score}</span></div>
-                  <div className="flex justify-between text-yellow-500"><span>{t('COINS')}</span><span className="font-bold">+{sessionStatsRef.current.coins}</span></div>
-                </div>
-                <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
-                  <button onClick={() => handleStartGame()} className="w-full py-3 bg-[#003688] hover:bg-[#002d72] text-white font-bold rounded-lg shadow-lg">{t('TRY_AGAIN')}</button>
-                  <div className="grid grid-cols-2 gap-3">
-                      <button onClick={() => setGameState(GameState.SHOP)} className="py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg shadow-lg">{t('SHOP')}</button>
-                      <button onClick={() => setGameState(GameState.START)} className="py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-lg shadow-lg border border-gray-600">{t('EXIT')}</button>
-                  </div>
+              <div className="absolute inset-0 bg-[#050505] flex flex-col items-center justify-center text-white p-6 text-center z-20 animate-fade-in">
+                {/* OFFICIAL TUBE GAME OVER UI */}
+                <div className="w-full max-w-xs border-t-8 border-[#E32017] bg-[#111] p-6 shadow-2xl relative">
+                    <h2 className="text-2xl font-bold text-white mb-1 tracking-wide uppercase font-tube">{t('GAME_OVER_TITLE')}</h2>
+                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-800 pb-4">{t('GAME_OVER_DESC')}</p>
+                    
+                    <div className="space-y-4 mb-8">
+                         <div className="flex justify-between items-end">
+                            <span className="text-gray-400 text-xs uppercase font-bold">{t('SCORE')}</span>
+                            <span className="text-4xl font-mono font-bold text-white">{score}<span className="text-sm text-gray-600 ml-1">m</span></span>
+                        </div>
+                         <div className="flex justify-between items-end">
+                            <span className="text-gray-400 text-xs uppercase font-bold">{t('BEST')}</span>
+                            <span className="text-xl font-mono font-bold text-gray-500">{highScore}</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-3 mb-8 bg-gray-900 p-3 rounded border border-gray-800">
+                        <div className="w-3 h-3 rounded-full bg-[#FFD700]"></div>
+                        <span className="text-xl font-bold text-yellow-500 font-mono">+{sessionStatsRef.current.coins}</span>
+                    </div>
+
+                    {/* ACTIONS - ROW LAYOUT - WIDER BUTTONS - UPDATED SPACING */}
+                    <div className="flex items-center justify-between w-full -mx-4">
+                        {/* SHOP (Left Square) - Wider */}
+                       <button onClick={() => setGameState(GameState.SHOP)} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl shadow-lg border border-gray-700 active:scale-95 transition-all">
+                           <span className="text-2xl mb-1">🛒</span> 
+                           <span className="text-[10px] uppercase">{t('SHOP')}</span> 
+                       </button>
+                       
+                       {/* TRY AGAIN (Center Roundel) */}
+                       <button onClick={() => handleStartGame()} className="w-28 h-28 flex-shrink-0 flex flex-col items-center justify-center bg-[#003688] hover:bg-[#002d72] text-white font-bold rounded-full shadow-lg shadow-blue-900/50 border-4 border-white scale-110 z-10 transition-transform hover:scale-110 active:scale-100 font-tube">
+                           <span className="text-sm text-center leading-tight px-2">{t('TRY_AGAIN')}</span>
+                       </button>
+                       
+                       {/* EXIT (Right Square) - Wider */}
+                       <button onClick={() => setGameState(GameState.START)} className="w-20 h-20 flex flex-col items-center justify-center bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl shadow-lg border border-gray-700 active:scale-95 transition-all">
+                           <span className="text-2xl mb-1">🚪</span> 
+                           <span className="text-[10px] uppercase">{t('EXIT')}</span> 
+                       </button>
+                    </div>
                 </div>
               </div>
             )}
 
             {gameState === GameState.SHOP && (
               <div className="absolute inset-0 bg-black/95 flex flex-col text-white p-4 z-30 animate-fade-in">
-                <div className="flex justify-between items-center mb-4"> <h2 className="text-2xl font-bold text-yellow-400">{t('TICKET_HALL')}</h2> <div className="bg-gray-800 px-3 py-1 rounded-full flex items-center gap-2"> <div className="w-3 h-3 rounded-full bg-[#FFD700]"></div> <span className="font-bold">{coins}</span> </div> </div>
+                <div className="flex justify-between items-center mb-4"> <h2 className="text-2xl font-bold text-yellow-400 font-tube">{t('TICKET_HALL')}</h2> <div className="bg-gray-800 px-3 py-1 rounded-full flex items-center gap-2"> <div className="w-3 h-3 rounded-full bg-[#FFD700]"></div> <span className="font-bold">{coins}</span> </div> </div>
                 <div className="flex w-full mb-4 bg-gray-800 rounded-lg p-1"> <button onClick={() => setShopTab('SKINS')} className={`flex-1 py-1 text-xs font-bold rounded-md transition-colors ${shopTab === 'SKINS' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>{t('SKINS')}</button> <button onClick={() => setShopTab('ITEMS')} className={`flex-1 py-1 text-xs font-bold rounded-md transition-colors ${shopTab === 'ITEMS' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>{t('ITEMS')}</button> </div>
                 <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-4 pb-4">
                   {shopTab === 'SKINS' && SHOP_SKINS.map(item => {
@@ -1511,8 +1845,39 @@
                 <button onClick={() => { setGameState(GameState.START); AudioSys.playTone(300, 'sine', 0.1); }} className="w-full py-3 bg-[#E32017] font-bold rounded-lg mt-2">{t('BACK')}</button>
               </div>
             )}
-            <div className="absolute bottom-0 w-full h-24 flex sm:hidden pointer-events-none z-30"> <div className="w-1/2 h-full pointer-events-auto active:bg-white/5 transition-colors" onTouchStart={() => handleTouchStart('left')} onTouchEnd={handleTouchEnd}/> <div className="w-1/2 h-full pointer-events-auto active:bg-white/5 transition-colors" onTouchStart={() => handleTouchStart('right')} onTouchEnd={handleTouchEnd}/> </div>
-          </div>
+
+            {/* NEU: Touch Layer wird nur angezeigt wenn man spielt */}
+            {gameState === GameState.PLAYING && (
+                <div className="absolute inset-0 flex sm:hidden z-20"> 
+                  {/* LEFT CONTROL AREA with VISUAL */}
+                  <div 
+                    className="w-1/2 h-full flex items-end justify-start p-6 active:bg-white/10 transition-colors pointer-events-auto" 
+                    onTouchStart={(e) => { handleTouchStart('left'); }} 
+                    onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(); }}
+                  >
+                      <div className="bg-white/20 p-4 rounded-full mb-10 ml-2 backdrop-blur-sm border-2 border-white/30">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="opacity-80">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        </svg>
+                      </div>
+                  </div> 
+
+                  {/* RIGHT CONTROL AREA with VISUAL */}
+                  <div 
+                    className="w-1/2 h-full flex items-end justify-end p-6 active:bg-white/10 transition-colors pointer-events-auto" 
+                    onTouchStart={(e) => { handleTouchStart('right'); }} 
+                    onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(); }}
+                  >
+                      <div className="bg-white/20 p-4 rounded-full mb-10 mr-2 backdrop-blur-sm border-2 border-white/30">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="opacity-80">
+                             <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                        </svg>
+                      </div>
+                  </div> 
+                </div>
+            )}
+
+          </div> 
         );
       };
 

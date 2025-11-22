@@ -1494,7 +1494,7 @@
         const buySkin = (item) => { if (coins >= item.price && !ownedSkins.includes(item.id)) { const newCoins = coins - item.price; const newOwned = [...ownedSkins, item.id]; setCoins(newCoins); setOwnedSkins(newOwned); setEquippedSkin(item.id); saveData(newCoins, newOwned, item.id, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.buy(); } };
         const buyConsumable = (item) => { if (coins >= item.price) { const newCoins = coins - item.price; const newInv = { ...inventory }; newInv[item.id] = (newInv[item.id] || 0) + 1; setCoins(newCoins); setInventory(newInv); saveData(newCoins, undefined, undefined, undefined, undefined, undefined, newInv, undefined, undefined); AudioSys.buy(); } };
         const equipSkin = (skinId) => { if (ownedSkins.includes(skinId)) { setEquippedSkin(skinId); saveData(undefined, undefined, skinId, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.playTone(400, 'sine', 0.1); } };
-        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER || gameState === GameState.SHOP || gameState === GameState.MISSIONS || gameState === GameState.RANKING;
+        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER;
 
         return (
           <div className="relative w-full max-w-md mx-auto bg-neutral-900 shadow-2xl rounded-xl overflow-hidden border-4 border-gray-800 select-none">
@@ -1889,7 +1889,7 @@
                     onTouchStart={(e) => { handleTouchStart('left'); }} 
                     onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(); }}
                   >
-                      <div className="bg-white/20 p-4 rounded-full mb-10 ml-2 backdrop-blur-sm border-2 border-white/30">
+                      <div className="bg-white/20 p-4 rounded-full mb-10 ml-2 backdrop-blur-sm border-2 border-white/30 active:scale-90 active:bg-white/30 transition-all">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="opacity-80">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
@@ -1902,7 +1902,7 @@
                     onTouchStart={(e) => { handleTouchStart('right'); }} 
                     onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(); }}
                   >
-                      <div className="bg-white/20 p-4 rounded-full mb-10 mr-2 backdrop-blur-sm border-2 border-white/30">
+                      <div className="bg-white/20 p-4 rounded-full mb-10 mr-2 backdrop-blur-sm border-2 border-white/30 active:scale-90 active:bg-white/30 transition-all">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="opacity-80">
                              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                         </svg>

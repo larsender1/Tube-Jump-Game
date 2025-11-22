@@ -333,7 +333,10 @@
               NO_DATA: "No passenger data found.",
               PLATFORM: "PLATFORM",
               DESTINATION: "DESTINATION",
-              TIME: "TIME"
+              TIME: "TIME",
+              DISPLAY: "DISPLAY",
+              FULLSCREEN: "TOGGLE FULLSCREEN",
+              FS_NOTE: "Note: iOS users please use 'Add to Home Screen'."
           },
           DE: {
               PLAY: "START",
@@ -384,7 +387,10 @@
               NO_DATA: "Keine Daten gefunden.",
               PLATFORM: "GLEIS",
               DESTINATION: "ZIEL",
-              TIME: "ZEIT"
+              TIME: "ZEIT",
+              DISPLAY: "BILDSCHIRM",
+              FULLSCREEN: "VOLLBILD UMSCHALTEN",
+              FS_NOTE: "iOS: Bitte 'Zum Home-Bildschirm' nutzen."
           }
       };
 
@@ -854,6 +860,19 @@
             setLanguage(lang);
             saveData(undefined, undefined, undefined, undefined, undefined, undefined, undefined, lang, undefined);
             AudioSys.toggle();
+        };
+        
+        // --- FULLSCREEN LOGIC ---
+        const toggleFullScreen = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
         };
         
         const submitName = () => {
@@ -1690,6 +1709,17 @@
                                 <span className="text-xs font-mono font-bold">{missionStats.totalGames}</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* NEW: Fullscreen Card */}
+                    <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                        <div className="flex justify-between items-center mb-2"> 
+                            <span className="font-bold text-sm text-white">{t('DISPLAY')}</span> 
+                        </div>
+                        <button onClick={toggleFullScreen} className="w-full py-2 text-xs font-bold rounded border border-gray-500 bg-black text-white hover:bg-gray-800 transition-colors mb-1">
+                            🖥️ {t('FULLSCREEN')}
+                        </button>
+                        <p className="text-[10px] text-gray-500 text-center italic">{t('FS_NOTE')}</p>
                     </div>
 
                 </div>

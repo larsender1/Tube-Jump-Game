@@ -16,6 +16,13 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
+      /* WICHTIGER FIX: Verhindert das graue Aufblitzen beim Tippen auf Mobile */
+      * {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        user-select: none;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
         background-color: #050505;
@@ -628,6 +635,7 @@
         const [leaderboard, setLeaderboard] = useState([]);
         const [isUploading, setIsUploading] = useState(false);
         const [hasEnteredName, setHasEnteredName] = useState(false); 
+        const [activeSide, setActiveSide] = useState(null); // For visual feedback
 
         const submitScoreAndFetchLeaderboard = async (finalScore) => {
             setIsUploading(true);
@@ -831,6 +839,27 @@
         useEffect(() => {
             if (isMuted) AudioSys.stopJetpack();
         }, [isMuted]);
+
+        // --- GLOBAL TOUCH END SAFETY NET ---
+        // This ensures that if a finger is lifted ANYWHERE on screen, we stop moving.
+        // This fixes the "stuck moving left" bug.
+        useEffect(() => {
+            const handleGlobalEnd = () => {
+                keysRef.current['ArrowLeft'] = false;
+                keysRef.current['ArrowRight'] = false;
+                setActiveSide(null);
+            };
+            
+            window.addEventListener('touchend', handleGlobalEnd);
+            window.addEventListener('touchcancel', handleGlobalEnd);
+            window.addEventListener('mouseup', handleGlobalEnd);
+            
+            return () => {
+                window.removeEventListener('touchend', handleGlobalEnd);
+                window.removeEventListener('touchcancel', handleGlobalEnd);
+                window.removeEventListener('mouseup', handleGlobalEnd);
+            };
+        }, []);
 
         const triggerCoinAnim = useCallback(() => {
             setCoinAnim(true);
@@ -1048,6 +1077,10 @@
         const initGame = useCallback(() => {
           AudioSys.init(); 
           
+          // FIX: RESET ALL KEYS ON GAME START TO PREVENT DRIFTING
+          keysRef.current = {}; 
+          setActiveSide(null);
+
           const currentEffects = [];
           const newInv = { ...inventory };
           
@@ -1484,17 +1517,28 @@
         useEffect(() => {
           const handleKeyDown = (e) => { keysRef.current[e.key] = true; if ((gameState === GameState.GAME_OVER || gameState === GameState.START) && e.key === 'Enter') handleStartGame(); if (gameState === GameState.SPLASH && e.key === 'Enter') startIntro(); if (gameState === GameState.NAME_INPUT && e.key === 'Enter') submitName(); };
           const handleKeyUp = (e) => keysRef.current[e.key] = false;
-          window.addEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp);
+          window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
           return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
         }, [gameState, handleStartGame, nameInput]);
 
         useEffect(() => { animationFrameRef.current = requestAnimationFrame(loop); return () => cancelAnimationFrame(animationFrameRef.current); }, [gameState]);
-        const handleTouchStart = (direction) => { if (direction === 'left') keysRef.current['ArrowLeft'] = true; else keysRef.current['ArrowRight'] = true; }; const handleTouchEnd = () => { keysRef.current['ArrowLeft'] = false; keysRef.current['ArrowRight'] = false; };
+        
+        // FIXED TOUCH HANDLERS
+        const handleTouchStart = (direction) => { 
+            if (direction === 'left') keysRef.current['ArrowLeft'] = true; 
+            else keysRef.current['ArrowRight'] = true; 
+            setActiveSide(direction);
+        }; 
+        const handleTouchEnd = () => { 
+            keysRef.current['ArrowLeft'] = false; 
+            keysRef.current['ArrowRight'] = false; 
+            setActiveSide(null);
+        };
 
         const buySkin = (item) => { if (coins >= item.price && !ownedSkins.includes(item.id)) { const newCoins = coins - item.price; const newOwned = [...ownedSkins, item.id]; setCoins(newCoins); setOwnedSkins(newOwned); setEquippedSkin(item.id); saveData(newCoins, newOwned, item.id, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.buy(); } };
         const buyConsumable = (item) => { if (coins >= item.price) { const newCoins = coins - item.price; const newInv = { ...inventory }; newInv[item.id] = (newInv[item.id] || 0) + 1; setCoins(newCoins); setInventory(newInv); saveData(newCoins, undefined, undefined, undefined, undefined, undefined, newInv, undefined, undefined); AudioSys.buy(); } };
         const equipSkin = (skinId) => { if (ownedSkins.includes(skinId)) { setEquippedSkin(skinId); saveData(undefined, undefined, skinId, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.playTone(400, 'sine', 0.1); } };
-        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER;
+        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER || gameState === GameState.SHOP || gameState === GameState.MISSIONS || gameState === GameState.RANKING;
 
         return (
           <div className="relative w-full max-w-md mx-auto bg-neutral-900 shadow-2xl rounded-xl overflow-hidden border-4 border-gray-800 select-none">
@@ -1885,11 +1929,12 @@
                 <div className="absolute inset-0 flex sm:hidden z-20"> 
                   {/* LEFT CONTROL AREA with VISUAL */}
                   <div 
-                    className="w-1/2 h-full flex items-end justify-start p-6 active:bg-white/10 transition-colors pointer-events-auto" 
+                    className="w-1/2 h-full flex items-end justify-start p-6 pointer-events-auto" 
                     onTouchStart={(e) => { handleTouchStart('left'); }} 
                     onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(); }}
+                    onTouchCancel={(e) => { e.preventDefault(); handleTouchEnd(); }}
                   >
-                      <div className="bg-white/20 p-4 rounded-full mb-10 ml-2 backdrop-blur-sm border-2 border-white/30 active:scale-90 active:bg-white/30 transition-all">
+                      <div className={`bg-white/20 p-4 rounded-full mb-10 ml-2 backdrop-blur-sm border-2 border-white/30 transition-all duration-75 ${activeSide === 'left' ? 'scale-90 bg-white/30 border-white' : 'scale-100'}`}>
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="opacity-80">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
@@ -1898,11 +1943,12 @@
 
                   {/* RIGHT CONTROL AREA with VISUAL */}
                   <div 
-                    className="w-1/2 h-full flex items-end justify-end p-6 active:bg-white/10 transition-colors pointer-events-auto" 
+                    className="w-1/2 h-full flex items-end justify-end p-6 pointer-events-auto" 
                     onTouchStart={(e) => { handleTouchStart('right'); }} 
                     onTouchEnd={(e) => { e.preventDefault(); handleTouchEnd(); }}
+                    onTouchCancel={(e) => { e.preventDefault(); handleTouchEnd(); }}
                   >
-                      <div className="bg-white/20 p-4 rounded-full mb-10 mr-2 backdrop-blur-sm border-2 border-white/30 active:scale-90 active:bg-white/30 transition-all">
+                      <div className={`bg-white/20 p-4 rounded-full mb-10 mr-2 backdrop-blur-sm border-2 border-white/30 transition-all duration-75 ${activeSide === 'right' ? 'scale-90 bg-white/30 border-white' : 'scale-100'}`}>
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="opacity-80">
                              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                         </svg>

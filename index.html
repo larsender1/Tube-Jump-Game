@@ -1538,7 +1538,9 @@
         const buySkin = (item) => { if (coins >= item.price && !ownedSkins.includes(item.id)) { const newCoins = coins - item.price; const newOwned = [...ownedSkins, item.id]; setCoins(newCoins); setOwnedSkins(newOwned); setEquippedSkin(item.id); saveData(newCoins, newOwned, item.id, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.buy(); } };
         const buyConsumable = (item) => { if (coins >= item.price) { const newCoins = coins - item.price; const newInv = { ...inventory }; newInv[item.id] = (newInv[item.id] || 0) + 1; setCoins(newCoins); setInventory(newInv); saveData(newCoins, undefined, undefined, undefined, undefined, undefined, newInv, undefined, undefined); AudioSys.buy(); } };
         const equipSkin = (skinId) => { if (ownedSkins.includes(skinId)) { setEquippedSkin(skinId); saveData(undefined, undefined, skinId, undefined, undefined, undefined, undefined, undefined, undefined); AudioSys.playTone(400, 'sine', 0.1); } };
-        const showHud = gameState === GameState.PLAYING || gameState === GameState.GAME_OVER || gameState === GameState.SHOP || gameState === GameState.MISSIONS || gameState === GameState.RANKING;
+        
+        // --- CHANGED: Only show HUD during gameplay or crash animation ---
+        const showHud = gameState === GameState.PLAYING || gameState === GameState.TERMINATED_ANIM;
 
         return (
           <div className="relative w-full max-w-md mx-auto bg-neutral-900 shadow-2xl rounded-xl overflow-hidden border-4 border-gray-800 select-none">
@@ -1565,7 +1567,8 @@
               <div className="bg-white/90 px-2 py-1 rounded-md shadow-md mb-1">
                   <span className="font-sans font-black text-[#009999] text-lg leading-none tracking-tight">SIEMENS</span>
               </div>
-              {hasEnteredName && (
+              {/* CHANGED: Hide name during INTRO and SPLASH */}
+              {hasEnteredName && gameState !== GameState.INTRO && gameState !== GameState.SPLASH && (
                   <div className="bg-black text-white font-mono text-xs px-1 py-0.5 border border-gray-500 shadow-sm uppercase tracking-wider animate-fade-in">
                       {playerName}
                   </div>

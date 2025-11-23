@@ -748,6 +748,7 @@
         const missionStatsRef = useRef({});
         const keysRef = useRef({});
         const animationFrameRef = useRef(0);
+        const lastTimeRef = useRef(0); // <--- NEW DELTA TIME REF
         const shakeRef = useRef(0);
         const introTimerRef = useRef(0);
         const roundelsRef = useRef([]);
@@ -1080,6 +1081,7 @@
           // FIX: RESET ALL KEYS ON GAME START TO PREVENT DRIFTING
           keysRef.current = {}; 
           setActiveSide(null);
+          lastTimeRef.current = 0; // Reset Timer
 
           const currentEffects = [];
           const newInv = { ...inventory };
@@ -1407,18 +1409,20 @@
           ctx.restore(); 
         };
 
-        // UPDATE GAME LOGIC
-        const update = () => {
+        // --- NEW UPDATED GAME LOGIC WITH DELTA TIME ---
+        const update = (dt) => {
           if (gameState !== GameState.PLAYING) { AudioSys.stopJetpack(); return; }
           const player = playerRef.current;
 
           if (keysRef.current['ArrowLeft'] || keysRef.current['a']) { player.vx = -MOVEMENT_SPEED; player.rotation = -0.15; } else if (keysRef.current['ArrowRight'] || keysRef.current['d']) { player.vx = MOVEMENT_SPEED; player.rotation = 0.15; } else { player.vx = 0; player.rotation = 0; }
-          player.x += player.vx; if (player.x + player.width < 0) player.x = CANVAS_WIDTH; else if (player.x > CANVAS_WIDTH) player.x = -player.width;
+          player.x += player.vx * dt; // * dt added
+          if (player.x + player.width < 0) player.x = CANVAS_WIDTH; else if (player.x > CANVAS_WIDTH) player.x = -player.width;
 
           platformsRef.current.forEach(p => { if (p.type === PlatformType.GHOST) { const cycle = (Date.now() / 10 + p.ghostOffset) % 200; p.ghostVisible = cycle < 100; } });
 
           if (player.isMagnetActive) {
-              player.magnetTimer--; if (player.magnetTimer <= 0) player.isMagnetActive = false;
+              player.magnetTimer -= 1 * dt; // * dt added
+              if (player.magnetTimer <= 0) player.isMagnetActive = false;
               platformsRef.current.forEach(p => { if (p.hasCoin) { const cX = p.x + p.width/2; const cY = p.y - 15; const dist = Math.sqrt(Math.pow((player.x + player.width/2) - cX, 2) + Math.pow((player.y + player.height/2) - cY, 2)); if (dist < 300) { p.hasCoin = false; floatingCoinsRef.current.push({ x: cX, y: cY, vx: 0, vy: 0 }); } } });
           }
 
@@ -1426,12 +1430,23 @@
           for (let i = floatingCoinsRef.current.length - 1; i >= 0; i--) {
               const c = floatingCoinsRef.current[i];
               const dx = pCenterX - c.x; const dy = pCenterY - c.y;
-              c.x += dx * 0.1; c.y += dy * 0.1;
+              c.x += dx * 0.1 * dt; // * dt added
+              c.y += dy * 0.1 * dt; // * dt added
               if (Math.abs(dx) < 20 && Math.abs(dy) < 20) { collectCoin(); createParticles(c.x, c.y, COLORS.GOLD, 6, 2, 0.6); floatingCoinsRef.current.splice(i, 1); }
           }
 
-          if (player.isJetpacking) { AudioSys.startJetpack(); player.vy = JETPACK_SPEED; player.jetpackTimer--; if (Math.random() > 0.3) createParticles(player.x + player.width/2, player.y + player.height, COLORS.ORANGE, 2, 2, 0.4); if (player.jetpackTimer <= 0) { player.isJetpacking = false; AudioSys.stopJetpack(); player.vy = JUMP_FORCE; } } else { AudioSys.stopJetpack(); player.vy += GRAVITY; if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED; }
-          player.y += player.vy;
+          if (player.isJetpacking) { 
+              AudioSys.startJetpack(); 
+              player.vy = JETPACK_SPEED; 
+              player.jetpackTimer -= 1 * dt; // * dt added
+              if (Math.random() > 0.3) createParticles(player.x + player.width/2, player.y + player.height, COLORS.ORANGE, 2, 2, 0.4); 
+              if (player.jetpackTimer <= 0) { player.isJetpacking = false; AudioSys.stopJetpack(); player.vy = JUMP_FORCE; } 
+          } else { 
+              AudioSys.stopJetpack(); 
+              player.vy += GRAVITY * dt; // * dt added
+              if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED; 
+          }
+          player.y += player.vy * dt; // * dt added
 
           const pRect = { left: player.x, right: player.x + player.width, top: player.y, bottom: player.y + player.height };
           platformsRef.current.forEach(p => {
@@ -1443,15 +1458,16 @@
           if (player.vy > 0 && !player.isJetpacking) {
             platformsRef.current.forEach(p => {
               if (p.type === PlatformType.GHOST && !p.ghostVisible) return;
-              if (!p.isBroken && player.x + player.width * 0.8 > p.x && player.x + player.width * 0.2 < p.x + p.width && player.y + player.height > p.y && player.y + player.height < p.y + p.height + player.vy) {
-                if (p.type === PlatformType.CONVEYOR) player.x += p.conveyorSpeed;
+              // LOOKAHEAD COLLISION FIX
+              if (!p.isBroken && player.x + player.width * 0.8 > p.x && player.x + player.width * 0.2 < p.x + p.width && player.y + player.height > p.y && player.y + player.height < p.y + p.height + (player.vy * dt + 2)) {
+                if (p.type === PlatformType.CONVEYOR) player.x += p.conveyorSpeed * dt; // * dt added
                 if (p.type === PlatformType.BREAKABLE) { p.isBroken = true; player.vy = JUMP_FORCE * 0.3; shakeRef.current = 5; createParticles(p.x + p.width/2, p.y, COLORS.BROWN, 12, 3); AudioSys.crash(); } else { sessionStatsRef.current.jumps += 1; sessionStatsRef.current.stops += 1; if (p.powerup === PowerupType.SPRING) { player.vy = SPRING_FORCE; shakeRef.current = 3; createParticles(player.x + player.width/2, p.y, COLORS.GREEN, 8, 4); AudioSys.spring(); sessionStatsRef.current.powerups++; } else { player.vy = JUMP_FORCE; createParticles(player.x + player.width/2, player.y + player.height, '#DDD', 4, 1, 0.5); AudioSys.jump(); } }
               }
             });
           }
 
-          platformsRef.current.forEach(p => { if (p.type === PlatformType.MOVING) { p.x += p.vx; if (p.x < 0 || p.x + p.width > CANVAS_WIDTH) p.vx *= -1; } });
-          particlesRef.current.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; p.vy += 0.1; }); particlesRef.current = particlesRef.current.filter(p => p.life > 0);
+          platformsRef.current.forEach(p => { if (p.type === PlatformType.MOVING) { p.x += p.vx * dt; if (p.x < 0 || p.x + p.width > CANVAS_WIDTH) p.vx *= -1; } }); // * dt added
+          particlesRef.current.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= 0.02 * dt; p.vy += 0.1 * dt; }); particlesRef.current = particlesRef.current.filter(p => p.life > 0); // * dt added everywhere
 
           if (player.y < CANVAS_HEIGHT / 2) {
             const diff = (CANVAS_HEIGHT / 2) - player.y; player.y = CANVAS_HEIGHT / 2; platformsRef.current.forEach(p => p.y += diff); floatingCoinsRef.current.forEach(c => c.y += diff); particlesRef.current.forEach(p => p.y += diff); scoreRef.current += Math.floor(diff); setScore(scoreRef.current);
@@ -1506,12 +1522,23 @@
           }
         };
 
-        const loop = (time) => {
+        const loop = (timestamp) => {
           const canvas = canvasRef.current;
           if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
-          update(); draw(ctx, time);
+          
+          // --- DELTA TIME CALCULATION ---
+          if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+          const deltaTime = timestamp - lastTimeRef.current;
+          lastTimeRef.current = timestamp;
+          let dt = deltaTime / (1000 / 60); // Normalize to 60fps
+          if (dt > 4) dt = 1; // Cap dt to prevent huge jumps
+          // ------------------------------
+
+          update(dt); 
+          draw(ctx, timestamp);
+          
           if (gameState === GameState.PLAYING || gameState === GameState.INTRO || gameState === GameState.TERMINATED_ANIM) { animationFrameRef.current = requestAnimationFrame(loop); } 
-          else if ([GameState.SPLASH, GameState.START, GameState.GAME_OVER, GameState.SHOP, GameState.MISSIONS, GameState.SETTINGS, GameState.NAME_INPUT, GameState.RANKING].includes(gameState)) { draw(ctx, time); if (gameState === GameState.SHOP || gameState === GameState.SPLASH || gameState === GameState.START || gameState === GameState.MISSIONS || gameState === GameState.SETTINGS || gameState === GameState.NAME_INPUT || gameState === GameState.RANKING) { animationFrameRef.current = requestAnimationFrame(loop); } }
+          else if ([GameState.SPLASH, GameState.START, GameState.GAME_OVER, GameState.SHOP, GameState.MISSIONS, GameState.SETTINGS, GameState.NAME_INPUT, GameState.RANKING].includes(gameState)) { draw(ctx, timestamp); if (gameState === GameState.SHOP || gameState === GameState.SPLASH || gameState === GameState.START || gameState === GameState.MISSIONS || gameState === GameState.SETTINGS || gameState === GameState.NAME_INPUT || gameState === GameState.RANKING) { animationFrameRef.current = requestAnimationFrame(loop); } }
         };
 
         useEffect(() => {

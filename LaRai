@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cibo Colorato - Neapolitanische Pizza</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fcfcfc;
+        }
+        h1, h2, h3, .serif-font {
+            font-family: 'Playfair Display', serif;
+        }
+        .hero-pattern {
+            background-color: #fff1f2; /* Light Red/Pink tint */
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e11d48' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm fixed w-full z-50 top-0 border-b border-gray-100">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <!-- Changed Icon to Pizza Slice -->
+                <div class="bg-red-600 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-pizza-slice"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 leading-none">Cibo Colorato</h1>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-sans hidden sm:block">Neapolitan Style</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <a href="#menu" class="hidden md:block font-medium hover:text-red-600 transition">Speisekarte</a>
+                <a href="#about" class="hidden md:block font-medium hover:text-red-600 transition">Über uns</a>
+                <button onclick="toggleCart()" class="relative p-2 text-gray-700 hover:text-red-600 transition">
+                    <i class="fas fa-shopping-bag text-xl"></i>
+                    <span id="cart-count" class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full transform scale-0 transition-transform duration-300">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-pattern pt-28 pb-16 md:pt-36 md:pb-24 px-4">
+        <div class="container mx-auto flex flex-col md:flex-row items-center">
+            <div class="md:w-1/2 mb-10 md:mb-0 text-center md:text-left fade-in">
+                <span class="bg-white border border-red-100 text-red-600 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block shadow-sm">🇮🇹 Traditioneller Stil</span>
+                <h2 class="text-4xl md:text-6xl font-bold leading-tight mb-4 text-gray-900">
+                    Neapolitanische <br>
+                    <span class="text-red-600 serif-font italic">Pizza Kunst</span>
+                </h2>
+                <p class="text-gray-600 text-lg mb-8 max-w-lg mx-auto md:mx-0 font-light">
+                    Genieße authentische Pizza wie in Neapel. Luftiger Teig, fruchtige Tomaten und feinster Mozzarella. Frisch aus dem Ofen.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                    <a href="#menu" class="bg-red-600 text-white px-8 py-3 rounded-full font-semibold shadow-lg hover:bg-red-700 transition transform hover:scale-105 text-center">
+                        Bestellung starten
+                    </a>
+                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm px-4">
+                        <i class="fas fa-clock text-red-500"></i> 40-50 Min. Lieferung
+                    </div>
+                </div>
+            </div>
+            <div class="md:w-1/2 flex justify-center fade-in relative" style="animation-delay: 0.2s;">
+                <!-- Decorative elements -->
+                <div class="absolute -z-10 w-72 h-72 bg-red-100 rounded-full blur-3xl opacity-50 top-10 right-10"></div>
+                <img src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Neapolitan Pizza" class="rounded-full shadow-2xl w-72 h-72 md:w-96 md:h-96 object-cover border-8 border-white animate-[spin_60s_linear_infinite]">
+            </div>
+        </div>
+    </header>
+
+    <!-- Menu Section -->
+    <section id="menu" class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <span class="text-red-600 font-bold text-sm uppercase tracking-widest">Il Menu</span>
+                <h3 class="text-3xl font-bold mb-2 mt-2">Unsere Spezialitäten</h3>
+                <p class="text-gray-500 font-light">Handgemacht mit Liebe und besten Zutaten</p>
+                
+                <!-- Category Filters -->
+                <div class="flex flex-wrap justify-center gap-3 mt-8">
+                    <button onclick="filterMenu('all')" class="filter-btn active bg-red-600 text-white px-6 py-2 rounded-full shadow-sm hover:shadow-md transition">Alle</button>
+                    <button onclick="filterMenu('classic')" class="filter-btn bg-white text-gray-700 border border-gray-200 px-6 py-2 rounded-full shadow-sm hover:shadow-md hover:border-red-600 hover:text-red-600 transition">Pizzen Classic</button>
+                    <button onclick="filterMenu('special')" class="filter-btn bg-white text-gray-700 border border-gray-200 px-6 py-2 rounded-full shadow-sm hover:shadow-md hover:border-red-600 hover:text-red-600 transition">Pizzen Spezial</button>
+                    <button onclick="filterMenu('panino')" class="filter-btn bg-white text-gray-700 border border-gray-200 px-6 py-2 rounded-full shadow-sm hover:shadow-md hover:border-red-600 hover:text-red-600 transition">Panino</button>
+                    <button onclick="filterMenu('drinks')" class="filter-btn bg-white text-gray-700 border border-gray-200 px-6 py-2 rounded-full shadow-sm hover:shadow-md hover:border-red-600 hover:text-red-600 transition">Getränke</button>
+                </div>
+            </div>
+
+            <!-- Product Grid -->
+            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Products will be injected here by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-16 bg-gray-50 border-t border-gray-100">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                <div class="p-6">
+                    <div class="w-16 h-16 bg-white text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+                        <i class="fas fa-fire-burner"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-2">Steinofen</h4>
+                    <p class="text-gray-500 text-sm">Gebacken bei 480°C für den perfekten Rand.</p>
+                </div>
+                <div class="p-6">
+                    <div class="w-16 h-16 bg-white text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+                        <i class="fas fa-seedling"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-2">San Marzano</h4>
+                    <p class="text-gray-500 text-sm">Nur die besten Tomaten vom Fuße des Vesuvs.</p>
+                </div>
+                <div class="p-6">
+                    <div class="w-16 h-16 bg-white text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-2">Top Bewertung</h4>
+                    <p class="text-gray-500 text-sm">8.4 Sterne Durchschnittsbewertung unserer Kunden.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12 border-t-4 border-red-600">
+        <div class="container mx-auto px-4 text-center">
+            <div class="mb-6">
+                 <h2 class="text-3xl font-bold mb-1 serif-font">Cibo Colorato</h2>
+                 <p class="text-gray-500 text-xs tracking-widest uppercase">Neapolitan Pizzeria</p>
+            </div>
+           
+            <div class="flex justify-center space-x-6 mb-8">
+                <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-red-600 transition"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-red-600 transition"><i class="fab fa-instagram"></i></a>
+            </div>
+            <p class="text-gray-500 text-sm">© 2023 Cibo Colorato. Buon Appetito!</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar / Modal -->
+    <div id="cart-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden transition-opacity duration-300 opacity-0 backdrop-blur-sm" onclick="toggleCart()"></div>
+    
+    <div id="cart-sidebar" class="fixed inset-y-0 right-0 w-full md:w-96 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="p-5 border-b flex justify-between items-center bg-white">
+            <h3 class="text-xl font-bold flex items-center text-gray-800">
+                Dein Warenkorb
+            </h3>
+            <button onclick="toggleCart()" class="text-gray-400 hover:text-red-600 transition">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50">
+            <!-- Empty state default -->
+            <div class="text-center py-10 text-gray-500">
+                <div class="mb-4 text-gray-300">
+                    <i class="fas fa-pizza-slice text-5xl"></i>
+                </div>
+                <p>Noch keine Pizza ausgewählt?</p>
+                <button onclick="toggleCart(); window.location.href='#menu'" class="mt-4 text-red-600 font-semibold hover:underline">Zur Speisekarte</button>
+            </div>
+        </div>
+
+        <div class="p-5 border-t bg-white shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+            <div class="flex justify-between mb-2 text-gray-600 text-sm">
+                <span>Zwischensumme</span>
+                <span id="subtotal-price">0.00 €</span>
+            </div>
+            <div class="flex justify-between mb-4 text-gray-600 text-sm">
+                <span>Lieferung</span>
+                <span>2.49 €</span>
+            </div>
+            <div class="flex justify-between mb-6 text-xl font-bold text-gray-900 border-t border-gray-100 pt-4">
+                <span>Gesamt</span>
+                <span id="total-price">0.00 €</span>
+            </div>
+            <button onclick="checkout()" class="w-full bg-red-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-red-700 transition transform hover:scale-[1.02] active:scale-95 flex justify-between px-6 items-center">
+                <span>Zur Kasse</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl z-50 transition-all duration-300 opacity-0 translate-y-10 flex items-center border-l-4 border-red-500">
+        <i class="fas fa-check text-red-500 mr-3"></i>
+        <span id="toast-message" class="font-medium">Hinzugefügt!</span>
+    </div>
+
+    <script>
+        // --- Data Adjusted to Cibo Colorato Image ---
+        const menuItems = [
+            // PIZZEN CLASSIC
+            {
+                id: 1,
+                name: "Pizza Margherita",
+                description: "Klassisch mit Tomatensoße, Mozzarella und frischem Basilikum.",
+                price: 11.50,
+                category: "classic",
+                image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: true
+            },
+            {
+                id: 2,
+                name: "Pizza Salami",
+                description: "Tomatensoße, Mozzarella und würzige italienische Salami.",
+                price: 13.50,
+                category: "classic",
+                image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: false
+            },
+            {
+                id: 3,
+                name: "Pizza Diavola",
+                description: "Für Scharfesser: Tomaten, Salami und frische Chili.",
+                price: 13.50,
+                category: "classic",
+                image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: true
+            },
+            
+            // PIZZEN SPEZIAL
+            {
+                id: 4,
+                name: "Pizza Prosciutto e Funghi",
+                description: "Hinterschinken, frische Champignons, Mozzarella.",
+                price: 14.50,
+                category: "special",
+                image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: false
+            },
+            {
+                id: 5,
+                name: "Pizza Bufalina",
+                description: "Büffelmozzarella DOP, Kirschtomaten, Basilikum.",
+                price: 16.00,
+                category: "special",
+                image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: false
+            },
+
+            // PANINO
+            {
+                id: 6,
+                name: "Panino Classico",
+                description: "Pizzateig-Sandwich mit Mozzarella, Rucola und Tomate.",
+                price: 9.50,
+                category: "panino",
+                image: "https://images.unsplash.com/photo-1623653387945-2fd25214f8fc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: false
+            },
+
+            // GETRÄNKE
+            {
+                id: 7,
+                name: "Coca-Cola Zero",
+                description: "0,5l PET Flasche. Enthält Koffein 10,0mg/100ml.",
+                price: 3.00,
+                category: "drinks",
+                image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: false
+            },
+            {
+                id: 8,
+                name: "Fanta Orange",
+                description: "0,5l PET Flasche.",
+                price: 3.00,
+                category: "drinks",
+                image: "https://images.unsplash.com/photo-1624517452488-04869289c4ca?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                popular: false
+            }
+        ];
+
+        let cart = [];
+
+        // --- Logic ---
+
+        function init() {
+            renderProducts('all');
+        }
+
+        function renderProducts(category) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+            
+            const filteredItems = category === 'all' 
+                ? menuItems 
+                : menuItems.filter(item => item.category === category);
+
+            filteredItems.forEach(item => {
+                const popularBadge = item.popular ? `<span class="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">Beliebt</span>` : '';
+                
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col fade-in group";
+                card.innerHTML = `
+                    <div class="h-48 overflow-hidden relative rounded-t-xl">
+                        <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover transition duration-700 group-hover:scale-105">
+                        ${popularBadge}
+                        <button onclick="addToCart(${item.id})" class="absolute bottom-3 right-3 bg-white text-red-600 w-10 h-10 rounded-full shadow-md flex items-center justify-center hover:bg-red-600 hover:text-white transition transform translate-y-12 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 duration-300">
+                             <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <div class="flex justify-between items-start mb-2">
+                             <h3 class="text-lg font-bold text-gray-900 serif-font leading-tight">${item.name}</h3>
+                             <span class="text-gray-900 font-bold ml-2">${item.price.toFixed(2)} €</span>
+                        </div>
+                        <p class="text-gray-500 text-sm mb-4 line-clamp-2 flex-1">${item.description}</p>
+                        
+                        <button onclick="addToCart(${item.id})" class="w-full border border-red-200 text-red-600 py-2 rounded-lg font-medium hover:bg-red-50 transition text-sm">
+                            In den Warenkorb
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterMenu(category) {
+            // Update Active Buttons
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                const isActive = (category === 'all' && btn.textContent === 'Alle') || 
+                                 (btn.textContent.toLowerCase().includes(category) && category !== 'all');
+                
+                if(isActive) {
+                    btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+                    btn.classList.add('bg-red-600', 'text-white', 'border-transparent');
+                } else {
+                    btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+                    btn.classList.remove('bg-red-600', 'text-white', 'border-transparent');
+                }
+            });
+            renderProducts(category);
+        }
+
+        function addToCart(id) {
+            const item = menuItems.find(p => p.id === id);
+            const existingItem = cart.find(i => i.id === id);
+
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
+
+            updateCartUI();
+            showToast(`1x ${item.name} hinzugefügt`);
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            updateCartUI();
+        }
+
+        function updateQuantity(id, change) {
+            const item = cart.find(i => i.id === id);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(id);
+                } else {
+                    updateCartUI();
+                }
+            }
+        }
+
+        function updateCartUI() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartCountBadge = document.getElementById('cart-count');
+            const subtotalEl = document.getElementById('subtotal-price');
+            const totalEl = document.getElementById('total-price');
+
+            // Update Badge
+            const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCountBadge.innerText = totalCount;
+            if (totalCount > 0) {
+                cartCountBadge.classList.remove('scale-0');
+            } else {
+                cartCountBadge.classList.add('scale-0');
+            }
+
+            // Update List
+            cartItemsContainer.innerHTML = '';
+            let subtotal = 0;
+
+            if (cart.length === 0) {
+                 cartItemsContainer.innerHTML = `
+                    <div class="text-center py-10 text-gray-500 fade-in">
+                        <div class="mb-4 text-gray-300">
+                             <i class="fas fa-pizza-slice text-5xl"></i>
+                        </div>
+                        <p>Dein Warenkorb ist leer.</p>
+                        <button onclick="toggleCart()" class="mt-4 text-red-600 font-semibold hover:underline">Geh zur Speisekarte</button>
+                    </div>
+                 `;
+            } else {
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    subtotal += itemTotal;
+                    
+                    const el = document.createElement('div');
+                    el.className = "flex gap-3 mb-4 fade-in bg-white p-3 rounded-lg shadow-sm border border-gray-100";
+                    el.innerHTML = `
+                        <div class="flex-1">
+                            <div class="flex justify-between">
+                                <h4 class="text-sm font-bold text-gray-900 serif-font">${item.name}</h4>
+                                <p class="font-bold text-sm text-gray-900">${itemTotal.toFixed(2)} €</p>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-2">${item.price.toFixed(2)} € pro Stück</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center border border-gray-200 rounded-md">
+                                    <button onclick="updateQuantity(${item.id}, -1)" class="px-2 py-1 text-gray-600 hover:bg-gray-100 text-xs">-</button>
+                                    <span class="px-2 text-sm font-medium min-w-[20px] text-center">${item.quantity}</span>
+                                    <button onclick="updateQuantity(${item.id}, 1)" class="px-2 py-1 text-gray-600 hover:bg-gray-100 text-xs">+</button>
+                                </div>
+                                <button onclick="removeFromCart(${item.id})" class="text-gray-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(el);
+                });
+            }
+
+            const delivery = cart.length > 0 ? 2.49 : 0;
+            const total = subtotal + delivery;
+
+            subtotalEl.innerText = subtotal.toFixed(2) + " €";
+            totalEl.innerText = total.toFixed(2) + " €";
+        }
+
+        // --- UI Interactions ---
+
+        function toggleCart() {
+            const sidebar = document.getElementById('cart-sidebar');
+            const overlay = document.getElementById('cart-overlay');
+            const body = document.body;
+
+            if (sidebar.classList.contains('translate-x-full')) {
+                // Open
+                sidebar.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                body.style.overflow = 'hidden';
+            } else {
+                // Close
+                sidebar.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+                body.style.overflow = 'auto';
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = message;
+            
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3000);
+        }
+
+        function checkout() {
+            if(cart.length === 0) return;
+            alert("Grazie! Deine neapolitanische Pizza ist bald unterwegs. 🍕🇮🇹");
+            cart = [];
+            updateCartUI();
+            toggleCart();
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
